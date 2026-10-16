@@ -18,3 +18,11 @@ npm run build
 ```
 
 Data lives on the device (IndexedDB). Use History, then Export backup to save a JSON copy.
+
+## Rules data
+`public/rules.json` is generated from the official Comprehensive Rules PDF:
+```
+pdftotext MagicCompRules.pdf cr.txt
+python3 scripts/parse_rules.py cr.txt public/rules.json
+```
+Run this again whenever Wizards publishes a new version.

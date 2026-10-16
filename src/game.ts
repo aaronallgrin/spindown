@@ -23,7 +23,8 @@ export function makeConfig(format: Format, subFormat: string | undefined, player
   return {
     format,
     subFormat: sub?.name,
-    startingLife: format === 'commander' ? 40 : (sub?.life ?? 20),
+    // Brawl: 25 life head to head, 30 in multiplayer (rule 119.1d)
+    startingLife: format === 'commander' ? 40 : sub?.name === 'Brawl' && players > 2 ? 30 : (sub?.life ?? 20),
     orientation: 'portrait',
     layoutId,
     players: Array.from({ length: players }, blankSeat),

@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useStore } from '../store';
 import { makeConfig } from '../game';
+import { getSync } from '../sync';
 import { defaultLayout, layoutsFor } from '../layouts';
 import { SUB_FORMATS, type Format } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
@@ -32,6 +33,7 @@ export default function Home() {
   const recent = useLiveQuery(() => db.games.orderBy('startedAt').reverse().limit(3).toArray(), []);
   const count = useLiveQuery(() => db.games.count(), []);
   const layouts = layoutsFor(prefs.players, 'portrait');
+  const syncOn = !!getSync();
   const subs = prefs.format === 'commander' ? [] : SUB_FORMATS[prefs.format];
   const subFormat = subs.length ? (subs.find((s) => s.name === prefs.sub[prefs.format]) ?? subs[0]).name : undefined;
 
@@ -150,6 +152,20 @@ export default function Home() {
           New game
         </ConfirmBtn>
       </section>
+
+      <nav className="mb-8 grid grid-cols-2 gap-2">
+        {[
+          { to: '/judge', title: 'Ask a Judge', sub: 'Rules and card rulings' },
+          { to: '/stats', title: 'Stats', sub: 'Win rates and records' },
+          { to: '/query', title: 'Query', sub: 'Ask your games anything' },
+          { to: '/sync', title: 'Cloud sync', sub: syncOn ? 'On' : 'Back up your games' },
+        ].map((t) => (
+          <Link key={t.to} to={t.to} className="rounded-xl bg-felt-2 px-4 py-3 hover:bg-felt-3">
+            <div className="font-cond text-xl font-bold">{t.title}</div>
+            <div className="text-xs text-dim">{t.sub}</div>
+          </Link>
+        ))}
+      </nav>
 
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="font-cond text-xl font-semibold">Recent games</h2>

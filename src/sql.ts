@@ -1,0 +1,149 @@
+import type { Database, SqlJsStatic } from 'sql.js';
+import type { GameRecord } from './types';
+import { places } from './stats';
+
+let SQL: Promise<SqlJsStatic> | null = null;
+
+async function engine() {
+  SQL ??= (async () => {
+    const [{ default: init }, { default: wasmUrl }] = await Promise.all([
+      import('sql.js/dist/sql-wasm-browser.js'),
+      import('sql.js/dist/sql-wasm-browser.wasm?url'),
+    ]);
+    return init({ locateFile: () => wasmUrl });
+  })();
+  return SQL;
+}
+
+export const SCHEMA = `games(id, date, format, sub_format, players, rounds, minutes, winner)
+players(game_id, date, format, sub_format, name, seat, turn_order, place, result, won,
+        commander, partner, deck, theme, colors, color_count, bracket,
+        out_round, out_cause, final_life, poison, cmdr_damage_taken, misplays)
+events(game_id, at, round, player, kind, delta, from_player, cause)`;
+
+const day = (ms: number) => new Date(ms).toLocaleDateString('en-CA');
+
+/** Build an in-memory database of every saved game. */
+export async function buildDb(games: GameRecord[]): Promise<Database> {
+  const S = await engine();
+  const d = new S.Database();
+  d.run(`
+    CREATE TABLE games(id TEXT PRIMARY KEY, date TEXT, format TEXT, sub_format TEXT, players INT, rounds INT, minutes INT, winner TEXT);
+    CREATE TABLE players(game_id TEXT, date TEXT, format TEXT, sub_format TEXT, name TEXT, seat INT, turn_order INT, place INT,
+      result TEXT, won INT, commander TEXT, partner TEXT, deck TEXT, theme TEXT, colors TEXT, color_count INT, bracket TEXT,
+      out_round INT, out_cause TEXT, final_life INT, poison INT, cmdr_damage_taken INT, misplays INT);
+    CREATE TABLE events(game_id TEXT, at TEXT, round INT, player TEXT, kind TEXT, delta INT, from_player TEXT, cause TEXT);
+  `);
+  const gi = d.prepare('INSERT INTO games VALUES (?,?,?,?,?,?,?,?)');
+  const pi = d.prepare('INSERT INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+  const ei = d.prepare('INSERT INTO events VALUES (?,?,?,?,?,?,?,?)');
+  d.run('BEGIN');
+  for (const g of games) {
+    const sub = g.config.subFormat ?? (g.format === 'commander' ? 'Commander' : null);
+    gi.run([g.id, day(g.startedAt), g.format, sub, g.playerCount, g.rounds, g.durationMin, g.winnerName]);
+    const pl = places(g);
+    const nameOf = (seat?: number) => (seat == null || seat < 0 ? null : g.players.find((p) => p.seat === seat)?.name ?? null);
+    for (const p of g.players)
+      pi.run([
+        g.id,
+        day(g.startedAt),
+        g.format,
+        sub,
+        p.name,
+        p.seat + 1,
+        p.turnOrder,
+        pl.get(p.seat) ?? null,
+        p.result,
+        p.result === 'win' ? 1 : 0,
+        p.commander ?? null,
+        p.partner ?? null,
+        p.deckName ?? null,
+        p.theme ?? null,
+        p.colors.join(''),
+        p.colors.length,
+        p.bracket == null ? null : p.bracket === 0 ? 'P' : String(p.bracket),
+        p.outRound ?? null,
+        p.outCause ?? null,
+        p.finalLife,
+        p.finalPoison,
+        p.cmdrDamageTaken,
+        p.finalExtra ?? 0,
+      ]);
+    for (const e of g.events)
+      ei.run([g.id, new Date(e.at).toISOString(), e.round, nameOf(e.seat), e.kind, e.delta ?? null, nameOf(e.from), e.cause ?? null]);
+  }
+  d.run('COMMIT');
+  gi.free();
+  pi.free();
+  ei.free();
+  return d;
+}
+
+export const EXAMPLES: { name: string; sql: string }[] = [
+  {
+    name: 'Win rate by player',
+    sql: `SELECT name, COUNT(*) AS games, SUM(won) AS wins,
+  ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
+FROM players
+GROUP BY name
+ORDER BY wins DESC;`,
+  },
+  {
+    name: 'Best commanders (3+ games)',
+    sql: `SELECT commander, partner, COUNT(*) AS games, SUM(won) AS wins,
+  ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
+FROM players
+WHERE commander IS NOT NULL
+GROUP BY commander, partner
+HAVING COUNT(*) >= 3
+ORDER BY win_pct DESC;`,
+  },
+  {
+    name: 'Does going first matter?',
+    sql: `SELECT turn_order, COUNT(*) AS games, SUM(won) AS wins,
+  ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
+FROM players
+GROUP BY turn_order
+ORDER BY turn_order;`,
+  },
+  {
+    name: 'Who deals the most commander damage',
+    sql: `SELECT from_player, SUM(delta) AS commander_damage
+FROM events
+WHERE kind = 'cmdr' AND delta > 0
+GROUP BY from_player
+ORDER BY commander_damage DESC;`,
+  },
+  {
+    name: 'Most misplays (*)',
+    sql: `SELECT name, SUM(misplays) AS total, ROUND(AVG(misplays), 2) AS per_game
+FROM players
+GROUP BY name
+ORDER BY total DESC;`,
+  },
+  {
+    name: 'Win rate by bracket',
+    sql: `SELECT bracket, COUNT(*) AS games, SUM(won) AS wins,
+  ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
+FROM players
+WHERE bracket IS NOT NULL
+GROUP BY bracket
+ORDER BY bracket;`,
+  },
+  {
+    name: 'Games per month',
+    sql: `SELECT substr(date, 1, 7) AS month, COUNT(*) AS games,
+  ROUND(AVG(rounds), 1) AS avg_rounds, ROUND(AVG(minutes)) AS avg_minutes
+FROM games
+GROUP BY month
+ORDER BY month DESC;`,
+  },
+  {
+    name: 'Biggest single life swings',
+    sql: `SELECT date(at) AS day, player, round, delta
+FROM events
+WHERE kind = 'life'
+ORDER BY ABS(delta) DESC
+LIMIT 10;`,
+  },
+];

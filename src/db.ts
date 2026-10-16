@@ -18,6 +18,7 @@ export async function importAll(json: string): Promise<number> {
   const data = JSON.parse(json);
   const games: GameRecord[] = Array.isArray(data) ? data : data.games;
   if (!Array.isArray(games)) throw new Error('That file has no games in it.');
-  await db.games.bulkPut(games);
+  // imported games upload on the next sync
+  await db.games.bulkPut(games.map((g) => ({ ...g, synced: 0 as const })));
   return games.length;
 }

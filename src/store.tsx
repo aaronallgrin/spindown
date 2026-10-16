@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { newGame, reduce, toRecord, type Action } from './game';
 import { db } from './db';
+import { syncNow } from './sync';
 import type { GameConfig, LiveGame } from './types';
 
 const CURRENT = 'spindown.current';
@@ -74,7 +75,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const saveAndClose = useCallback(async () => {
     if (!game) return null;
-    if (game.phase === 'over') await db.games.put(toRecord(game));
+    if (game.phase === 'over') {
+      await db.games.put(toRecord(game));
+      syncNow();
+    }
     history.current = [];
     setCanUndo(false);
     setGame(null);

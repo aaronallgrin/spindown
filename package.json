@@ -14,15 +14,18 @@
     "@fontsource/barlow-condensed": "^5.3.0",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
+    "minisearch": "^7.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "sql.js": "^1.15.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
     "sharp": "^0.35.5",

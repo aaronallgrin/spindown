@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { queueDelete, syncNow } from '../sync';
 import { BRACKETS } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
 import { Page, Pips, causeLabel, fmtDate } from '../ui';
@@ -21,6 +22,8 @@ export default function GameDetail() {
 
   const remove = async () => {
     await db.games.delete(g.id);
+    queueDelete(g.id);
+    syncNow();
     nav('/history');
   };
 

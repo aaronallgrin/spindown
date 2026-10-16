@@ -64,3 +64,39 @@ function toRef(c: any): CardRef {
     artCrop: art,
   };
 }
+
+export async function autocompleteCards(q: string, signal?: AbortSignal): Promise<string[]> {
+  if (q.trim().length < 2) return [];
+  const res = await fetch(`${API}/cards/autocomplete?q=${encodeURIComponent(q.trim())}`, { signal });
+  if (!res.ok) throw new Error(`Scryfall ${res.status}`);
+  return (await res.json()).data ?? [];
+}
+
+export interface CardRulings {
+  name: string;
+  manaCost?: string;
+  typeLine?: string;
+  oracle?: string;
+  image?: string;
+  scryfallUri?: string;
+  rulings: { date: string; source: string; text: string }[];
+}
+
+export async function getRulings(name: string): Promise<CardRulings> {
+  const res = await fetch(`${API}/cards/named?fuzzy=${encodeURIComponent(name)}`);
+  if (!res.ok) throw new Error(`No card found for “${name}”.`);
+  const c = await res.json();
+  const faces = c.card_faces as { name: string; mana_cost?: string; type_line?: string; oracle_text?: string }[] | undefined;
+  const r = await fetch(c.rulings_uri);
+  const rulings = r.ok ? ((await r.json()).data ?? []) : [];
+  return {
+    name: c.name,
+    manaCost: c.mana_cost ?? faces?.map((f) => f.mana_cost).filter(Boolean).join(' // '),
+    typeLine: c.type_line,
+    oracle: c.oracle_text ?? faces?.map((f) => `${f.name}\n${f.oracle_text ?? ''}`).join('\n\n'),
+    image: c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal,
+    scryfallUri: c.scryfall_uri,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rulings: rulings.map((x: any) => ({ date: x.published_at, source: x.source, text: x.comment })),
+  };
+}
