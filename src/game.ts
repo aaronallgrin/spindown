@@ -62,6 +62,8 @@ export function newGame(config: GameConfig): LiveGame {
 
 export type Action =
   | { t: 'life'; seat: number; d: number }
+  | { t: 'setLife'; seat: number; value: number }
+  | { t: 'egg'; seat: number; egg: string }
   | { t: 'poison'; seat: number; d: number }
   | { t: 'cmdr'; seat: number; from: number; partner: 0 | 1; d: number }
   | { t: 'monarch'; seat: number }
@@ -158,6 +160,16 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const n = patch(g, a.seat, (p) => ({ ...p, life: p.life + a.d }));
       return { ...n, events: log(g, { kind: 'life', seat: a.seat, delta: a.d }) };
     }
+    case 'setLife': {
+      const d = a.value - g.players[a.seat].life;
+      if (!d) return g;
+      const n = patch(g, a.seat, (p) => ({ ...p, life: a.value }));
+      // a typed-in total is its own update, never merged with taps
+      return { ...n, events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'life', delta: d }] };
+    }
+    case 'egg':
+      if (g.events.some((e) => e.kind === 'egg' && e.seat === a.seat && e.egg === a.egg)) return g;
+      return { ...g, events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'egg', egg: a.egg }] };
     case 'poison': {
       const n = patch(g, a.seat, (p) => ({ ...p, poison: Math.max(0, p.poison + a.d) }));
       const real = n.players[a.seat].poison - g.players[a.seat].poison;
@@ -320,7 +332,7 @@ export function toRecord(g: LiveGame): GameRecord {
       finalPoison: p.poison,
       cmdrDamageTaken: Object.values(p.cmdr).reduce((a, b) => a + b, 0),
       finalExtra: g.config.extraCounter ? (p.extra ?? 0) : undefined,
-      wasMonarchAtEnd: g.monarchSeat === p.seat,
+      wasMonarchAtEnd: false,
     };
   });
   const winner = players.find((p) => p.result === 'win');

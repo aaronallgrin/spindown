@@ -26,3 +26,7 @@ pdftotext MagicCompRules.pdf cr.txt
 python3 scripts/parse_rules.py cr.txt public/rules.json
 ```
 Run this again whenever Wizards publishes a new version.
+
+## Old spreadsheet games
+`scripts/import_xlsx.py` turns the old MTG_Commander_Tracker.xlsx into a backup file
+(History, then Import backup). Commander names are corrected using `scripts/commander_fixes.json`.

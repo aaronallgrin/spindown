@@ -20,6 +20,9 @@ import {
   type Row,
 } from '../stats';
 import { Page, Pips, fmtDate } from '../ui';
+import { TrophyIcon } from '../components/Trophies';
+import type { GameRecord } from '../types';
+import { TROPHY_INFO, eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
 
 const FKEY = 'spindown.statsFilters';
 const loadF = (): Filters => {
@@ -102,8 +105,8 @@ export default function Stats() {
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-3 gap-2">
             <Tile label="Games" value={String(s.games)} />
-            <Tile label="Avg rounds" value={s.avgRounds.toFixed(1)} />
-            <Tile label="Avg length" value={`${Math.round(s.avgMinutes)} min`} />
+            <Tile label="Avg rounds" value={s.avgRounds == null ? '–' : s.avgRounds.toFixed(1)} />
+            <Tile label="Avg length" value={s.avgMinutes == null ? '–' : `${Math.round(s.avgMinutes)} min`} />
           </div>
 
           <Section title="Players" note={fair ? `A fair share of wins at these tables is ${pct(fair)}.` : undefined}>
@@ -159,6 +162,10 @@ export default function Stats() {
               .sort((a, b) => b.n - a.n)}
             empty="Nobody has a * yet."
           />
+
+          <RoundTimes games={games} />
+
+          <TrophyCase games={games} />
 
           <Section title="Fastest wins">
             {fastestWins(f.player === 'all' ? games : games.filter((g) => g.winnerName === f.player)).map(({ g, w }) => (
@@ -316,6 +323,85 @@ function HeadToHead({ games, names }: { games: Parameters<typeof headToHead>[0];
           <p className="col-span-3 px-1 pb-1 text-sm text-dim">
             {a} outlasted {b} in {h.aAhead} of {h.together} games.
           </p>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function RoundTimes({ games }: { games: GameRecord[] }) {
+  const rows = games.flatMap((g) => roundSeconds(g).map((s, i) => ({ g, round: i + 1, s }))).filter((r) => r.s > 0);
+  if (!rows.length) return null;
+  const avg = rows.reduce((a, r) => a + r.s, 0) / rows.length;
+  const longest = [...rows].sort((a, b) => b.s - a.s).slice(0, 3);
+  // average time by round number, first 10 rounds
+  const byRound = Array.from({ length: 10 }, (_, i) => {
+    const r = rows.filter((x) => x.round === i + 1);
+    return { round: i + 1, n: r.length, avg: r.length ? r.reduce((a, x) => a + x.s, 0) / r.length : 0 };
+  }).filter((r) => r.n);
+  const max = Math.max(...byRound.map((r) => r.avg));
+  return (
+    <Section title="Round times" note={`An average round takes ${fmtSecs(avg)}.`}>
+      {byRound.map((r) => (
+        <div key={r.round} className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-3 px-2 py-1.5">
+          <span className="text-sm text-dim">Round {r.round}</span>
+          <div className="h-1.5 rounded-full bg-felt-3" aria-hidden>
+            <div className="h-full rounded-full bg-brass" style={{ width: `${(r.avg / max) * 100}%` }} />
+          </div>
+          <span className="text-right font-cond text-lg font-bold tabular-nums">{fmtSecs(r.avg)}</span>
+        </div>
+      ))}
+      <div className="mt-2 border-t border-line px-2 pt-2 text-sm text-dim">
+        Longest rounds:{' '}
+        {longest.map((l, i) => (
+          <Link key={i} to={`/history/${l.g.id}`} className="text-bone hover:text-brass">
+            {fmtSecs(l.s)} (round {l.round}, {fmtDate(l.g.startedAt)}){i < longest.length - 1 ? ', ' : ''}
+          </Link>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function TrophyCase({ games }: { games: GameRecord[] }) {
+  const won = games.flatMap((g) => trophies(g));
+  const secrets = new Map<string, Set<string>>();
+  for (const g of games)
+    for (const e of eggsFound(g)) {
+      if (!e.name) continue;
+      const s = secrets.get(e.name) ?? new Set();
+      s.add(e.id);
+      secrets.set(e.name, s);
+    }
+  if (!won.length && !secrets.size) return null;
+  const ids = Object.keys(TROPHY_INFO).filter((id) => won.some((t) => t.id === id));
+  return (
+    <Section title="Trophy case">
+      {ids.map((id) => {
+        const holders = new Map<string, number>();
+        won.filter((t) => t.id === id).forEach((t) => holders.set(t.name ?? 'The table', (holders.get(t.name ?? 'The table') ?? 0) + 1));
+        return (
+          <div key={id} className="flex items-start gap-3 px-2 py-2">
+            <TrophyIcon size={22} />
+            <div className="min-w-0">
+              <div className="font-semibold">{TROPHY_INFO[id].title}</div>
+              <div className="text-sm text-dim">
+                {[...holders.entries()]
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([n, c]) => (c > 1 ? `${n} ×${c}` : n))
+                  .join(', ')}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {secrets.size > 0 && (
+        <div className="mt-1 border-t border-line px-2 pt-2 text-sm text-dim">
+          Secrets found:{' '}
+          {[...secrets.entries()]
+            .sort((a, b) => b[1].size - a[1].size)
+            .map(([n, s]) => `${n} ${s.size}`)
+            .join(', ')}
         </div>
       )}
     </Section>

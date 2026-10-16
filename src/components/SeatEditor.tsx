@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import CommanderPicker from './CommanderPicker';
+import { getCard } from '../scryfall';
 import { deckKey, usePlayerMemory } from './usePlayerMemory';
 import { BRACKETS, type Format, type Mana, type PlayerSetup } from '../types';
 import { Btn, ManaPicker, Pips, Segmented, sortMana } from '../ui';
@@ -92,7 +93,14 @@ export default function SeatEditor({
                 <button
                   key={deckKey(setup)}
                   type="button"
-                  onClick={() => setP({ ...setup, name: p.name })}
+                  onClick={async () => {
+                    setP({ ...setup, name: p.name });
+                    // older or imported games may not have card art saved
+                    const fill = async (c?: PlayerSetup['commander']) =>
+                      c && !c.artCrop ? await getCard(c.name).catch(() => c) : c;
+                    const [commander, partner] = await Promise.all([fill(setup.commander), fill(setup.partner)]);
+                    setP((x) => ({ ...x, commander, partner }));
+                  }}
                   className="flex items-center gap-2 rounded-full bg-felt-2 px-3 py-1.5 text-sm hover:bg-felt-3"
                 >
                   <Pips colors={setup.colors} size={9} />

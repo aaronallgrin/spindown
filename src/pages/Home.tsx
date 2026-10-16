@@ -188,7 +188,7 @@ export default function Home() {
               <div className="flex items-center gap-2 text-sm text-dim">
                 {w && <Pips colors={w.colors} size={10} />}
                 <span className="truncate">{w?.commander ?? w?.deckName ?? ''}</span>
-                <span className="ml-auto shrink-0">round {g.rounds}</span>
+                {g.rounds > 0 && <span className="ml-auto shrink-0">round {g.rounds}</span>}
               </div>
             </Link>
           );

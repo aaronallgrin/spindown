@@ -143,3 +143,23 @@ export function startAutoSync() {
   window.addEventListener('online', () => syncNow());
   window.setInterval(() => document.visibilityState === 'visible' && syncNow(), 5 * 60 * 1000);
 }
+
+// ---- invite another device with a link / QR code ----
+
+const b64url = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64url = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+
+export function inviteLink(c: SyncConfig) {
+  const code = b64url(JSON.stringify({ u: c.url, k: c.key }));
+  return `${location.origin}${location.pathname}#/join/${code}`;
+}
+
+export function decodeInvite(code: string): SyncConfig | null {
+  try {
+    const o = JSON.parse(unb64url(code));
+    if (typeof o.u === 'string' && /^https:\/\//.test(o.u) && typeof o.k === 'string') return { url: o.u, key: o.k };
+  } catch {
+    /* fall through */
+  }
+  return null;
+}

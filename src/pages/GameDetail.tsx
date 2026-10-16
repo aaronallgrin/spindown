@@ -4,6 +4,8 @@ import { db } from '../db';
 import { queueDelete, syncNow } from '../sync';
 import { BRACKETS } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
+import TrophyList from '../components/Trophies';
+import { eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
 import { Page, Pips, causeLabel, fmtDate } from '../ui';
 
 export default function GameDetail() {
@@ -30,7 +32,8 @@ export default function GameDetail() {
   return (
     <Page title={g.winnerName ? `${g.winnerName} won` : 'Draw'} back="/history">
       <p className="mb-5 text-dim">
-        {fmtDate(g.startedAt)}, {g.rounds} {g.rounds === 1 ? "round" : "rounds"}, {g.durationMin} min
+        {fmtDate(g.startedAt)}, {g.rounds ? `${g.rounds} ${g.rounds === 1 ? 'round' : 'rounds'}, ` : ''}
+        {g.imported ? 'imported from the old spreadsheet' : `${g.durationMin} min`}
       </p>
 
       <div className="flex flex-col gap-2">
@@ -39,7 +42,7 @@ export default function GameDetail() {
             <div className="flex items-center gap-2">
               <Pips colors={p.colors} />
               <span className="text-lg font-semibold">{p.name}</span>
-              <span className="ml-auto text-sm text-dim">went {ordinal(p.turnOrder)}</span>
+              {p.turnOrder > 0 && <span className="ml-auto text-sm text-dim">went {ordinal(p.turnOrder)}</span>}
             </div>
             <div className="mt-0.5 text-bone/80">
               {p.commander ?? p.deckName ?? 'No deck recorded'}
@@ -62,6 +65,39 @@ export default function GameDetail() {
           </div>
         ))}
       </div>
+
+      {(() => {
+        const secs = roundSeconds(g);
+        const t = trophies(g);
+        const eggs = eggsFound(g);
+        return (
+          <>
+            {secs.length > 0 && (
+              <section className="mt-6">
+                <h2 className="mb-2 font-cond text-2xl font-bold">Round times</h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {secs.map((s, i) => (
+                    <span key={i} className="rounded-md bg-felt-2 px-2 py-1 text-sm tabular-nums">
+                      <span className="text-dim">R{i + 1}</span> {fmtSecs(s)}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+            {t.length > 0 && (
+              <section className="mt-6">
+                <h2 className="mb-2 font-cond text-2xl font-bold">Trophies</h2>
+                <TrophyList items={t} />
+              </section>
+            )}
+            {eggs.length > 0 && (
+              <p className="mt-6 text-sm text-dim">
+                Secrets found: {eggs.map((e) => `${e.name} (${e.id})`).join(', ')}
+              </p>
+            )}
+          </>
+        );
+      })()}
 
       <ConfirmBtn variant="quiet" className="mt-8 w-full" onConfirm={remove} confirmLabel="Tap again to delete this game">
         Delete game

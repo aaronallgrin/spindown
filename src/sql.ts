@@ -1,6 +1,7 @@
 import type { Database, SqlJsStatic } from 'sql.js';
 import type { GameRecord } from './types';
 import { places } from './stats';
+import { roundSeconds, trophies } from './eggs';
 
 let SQL: Promise<SqlJsStatic> | null = null;
 
@@ -19,7 +20,9 @@ export const SCHEMA = `games(id, date, format, sub_format, players, rounds, minu
 players(game_id, date, format, sub_format, name, seat, turn_order, place, result, won,
         commander, partner, deck, theme, colors, color_count, bracket,
         out_round, out_cause, final_life, poison, cmdr_damage_taken, misplays)
-events(game_id, at, round, player, kind, delta, from_player, cause)`;
+events(game_id, at, round, player, kind, delta, from_player, cause)
+rounds(game_id, date, players, round, seconds)
+trophies(game_id, date, trophy, player)`;
 
 const day = (ms: number) => new Date(ms).toLocaleDateString('en-CA');
 
@@ -33,14 +36,18 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
       result TEXT, won INT, commander TEXT, partner TEXT, deck TEXT, theme TEXT, colors TEXT, color_count INT, bracket TEXT,
       out_round INT, out_cause TEXT, final_life INT, poison INT, cmdr_damage_taken INT, misplays INT);
     CREATE TABLE events(game_id TEXT, at TEXT, round INT, player TEXT, kind TEXT, delta INT, from_player TEXT, cause TEXT);
+    CREATE TABLE rounds(game_id TEXT, date TEXT, players INT, round INT, seconds INT);
+    CREATE TABLE trophies(game_id TEXT, date TEXT, trophy TEXT, player TEXT);
   `);
+  const ri = d.prepare('INSERT INTO rounds VALUES (?,?,?,?,?)');
+  const ti = d.prepare('INSERT INTO trophies VALUES (?,?,?,?)');
   const gi = d.prepare('INSERT INTO games VALUES (?,?,?,?,?,?,?,?)');
   const pi = d.prepare('INSERT INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
   const ei = d.prepare('INSERT INTO events VALUES (?,?,?,?,?,?,?,?)');
   d.run('BEGIN');
   for (const g of games) {
     const sub = g.config.subFormat ?? (g.format === 'commander' ? 'Commander' : null);
-    gi.run([g.id, day(g.startedAt), g.format, sub, g.playerCount, g.rounds, g.durationMin, g.winnerName]);
+    gi.run([g.id, day(g.startedAt), g.format, sub, g.playerCount, g.rounds || null, g.imported ? null : g.durationMin, g.winnerName]);
     const pl = places(g);
     const nameOf = (seat?: number) => (seat == null || seat < 0 ? null : g.players.find((p) => p.seat === seat)?.name ?? null);
     for (const p of g.players)
@@ -51,7 +58,7 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
         sub,
         p.name,
         p.seat + 1,
-        p.turnOrder,
+        p.turnOrder || null,
         pl.get(p.seat) ?? null,
         p.result,
         p.result === 'win' ? 1 : 0,
@@ -69,6 +76,8 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
         p.cmdrDamageTaken,
         p.finalExtra ?? 0,
       ]);
+    roundSeconds(g).forEach((s, i) => ri.run([g.id, day(g.startedAt), g.playerCount, i + 1, s]));
+    for (const t of trophies(g)) ti.run([g.id, day(g.startedAt), t.title, t.name ?? null]);
     for (const e of g.events)
       ei.run([g.id, new Date(e.at).toISOString(), e.round, nameOf(e.seat), e.kind, e.delta ?? null, nameOf(e.from), e.cause ?? null]);
   }
@@ -76,6 +85,8 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
   gi.free();
   pi.free();
   ei.free();
+  ri.free();
+  ti.free();
   return d;
 }
 
@@ -137,6 +148,21 @@ ORDER BY bracket;`,
 FROM games
 GROUP BY month
 ORDER BY month DESC;`,
+  },
+  {
+    name: 'Round length by round',
+    sql: `SELECT round, COUNT(*) AS games, ROUND(AVG(seconds) / 60.0, 1) AS avg_minutes,
+  ROUND(MAX(seconds) / 60.0, 1) AS longest_minutes
+FROM rounds
+GROUP BY round
+ORDER BY round;`,
+  },
+  {
+    name: 'Trophy leaders',
+    sql: `SELECT player, trophy, COUNT(*) AS times
+FROM trophies
+GROUP BY player, trophy
+ORDER BY times DESC;`,
   },
   {
     name: 'Biggest single life swings',

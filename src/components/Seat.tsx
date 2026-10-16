@@ -5,6 +5,8 @@ import type { LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
 import { Crown, Skull } from './icons';
 import { usePress } from './usePress';
+import { mayWhisper, onToast } from './toastBus';
+import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
 
 interface Props {
   game: LiveGame;
@@ -27,6 +29,56 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
   const art = setup.commander?.artCrop;
   const colors = sortMana(setup.colors);
   const extraName = game.config.extraCounter?.trim();
+  const [keypad, setKeypad] = useState(false);
+
+  // quiet easter-egg line
+  const [whisper, setWhisper] = useState<{ text: string; key: number } | null>(null);
+  const say = (text: string) => setWhisper({ text, key: Date.now() });
+  useEffect(() => onToast(seat, say), [seat]);
+  useEffect(() => {
+    if (!whisper) return;
+    const t = window.setTimeout(() => setWhisper(null), 4300);
+    return () => window.clearTimeout(t);
+  }, [whisper]);
+
+  const live = useRef(game);
+  live.current = game;
+  const canEgg = () => live.current.phase === 'playing' && !live.current.players[seat].out;
+  const fire = (egg: Egg | null) => {
+    if (!egg || !canEgg()) return;
+    if (live.current.events.some((e) => e.kind === 'egg' && e.seat === seat && e.egg === egg.id)) return;
+    if (!mayWhisper(seat)) return;
+    dispatch({ t: 'egg', seat, egg: egg.id });
+    say(egg.text);
+  };
+  useSettled(p.life, (before, after) => {
+    const others = live.current.players.filter((x) => x.seat !== seat && !x.out);
+    fire(lifeEgg(before, after, others.every((x) => x.life <= after)));
+  });
+  useSettled(p.poison, (_, after) => fire(poisonEgg(after)));
+  useSettled(JSON.stringify(p.cmdr), (before, after) => {
+    const b = JSON.parse(before) as Record<string, number>;
+    const a = JSON.parse(after) as Record<string, number>;
+    for (const k of Object.keys(a)) {
+      const egg = cmdrEgg(b[k] ?? 0, a[k]);
+      if (egg) return fire(egg);
+    }
+  });
+
+  const shamedRound = useRef(-1);
+  const star = usePress(
+    () => {
+      dispatch({ t: 'extra', seat, d: 1 });
+      // at most one shaming per player per round
+      if (canEgg() && shamedRound.current !== live.current.round && mayWhisper(seat)) {
+        shamedRound.current = live.current.round;
+        say(shame());
+      }
+    },
+    () => dispatch({ t: 'extra', seat, d: -1 }),
+    500,
+    1e9,
+  );
 
   const minus = usePress(
     () => dispatch({ t: 'life', seat, d: -1 }),
@@ -44,7 +96,8 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
         .join(', ')})`;
 
   return (
-    <div className="seat" style={{ gridArea: area }}>
+    // an open keypad or counter panel sits above the center die
+    <div className="seat" style={{ gridArea: area, zIndex: keypad || panel ? 25 : undefined }}>
       <div className={`face r${rot}`}>
         <div className="face-inner overflow-hidden" style={{ background: bg ?? '#111' }}>
           {art && <div className="art" style={{ backgroundImage: `url(${art})` }} />}
@@ -70,10 +123,21 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               <div className="truncate font-semibold" style={{ fontSize: 'clamp(13px, 8cqh, 26px)' }}>
                 {setup.name}
               </div>
-              <div className="truncate text-bone/70" style={{ fontSize: 'clamp(10px, 5.2cqh, 16px)' }}>
-                {setup.commander?.name ?? setup.deckName ?? ''}
-                {setup.hasPartner && setup.partner ? ` + ${setup.partner.name}` : ''}
-              </div>
+              {whisper ? (
+                // easter eggs borrow the commander line for a few seconds
+                <div
+                  key={whisper.key}
+                  className="whisper line-clamp-2 italic leading-snug text-brass"
+                  style={{ fontSize: 'clamp(10px, 5.2cqh, 16px)' }}
+                >
+                  {whisper.text}
+                </div>
+              ) : (
+                <div className="truncate text-bone/70" style={{ fontSize: 'clamp(10px, 5.2cqh, 16px)' }}>
+                  {setup.commander?.name ?? setup.deckName ?? ''}
+                  {setup.hasPartner && setup.partner ? ` + ${setup.partner.name}` : ''}
+                </div>
+              )}
             </div>
           </div>
 
@@ -114,18 +178,41 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
             >
               <Count label="Poison" value={p.poison} hot={p.poison > 0} />
               {isCmdr && <Count label="Cmdr" value={cmdrMax} hot={cmdrMax > 0} />}
-              {extraName && <Count label={extraName} value={p.extra ?? 0} hot={(p.extra ?? 0) > 0} />}
             </button>
             <div className="flex-1" />
             <button
-              onClick={() => dispatch({ t: 'monarch', seat })}
-              aria-pressed={game.monarchSeat === seat}
-              aria-label="Monarch"
-              className={`rounded-full p-1.5 ${game.monarchSeat === seat ? 'bg-brass-2 text-felt' : 'bg-black/45 text-bone/50'}`}
+              onClick={() => setKeypad(true)}
+              aria-label="Type a life total"
+              className="grid h-[2.1em] w-[2.1em] place-items-center rounded-full bg-black/50 text-bone/80 backdrop-blur-sm"
             >
-              <Crown size="1.3em" />
+              <KeypadIcon />
             </button>
+            {extraName && (
+              <button
+                {...star}
+                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to add, hold to take one back`}
+                className={`flex h-[2.1em] min-w-[2.1em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
+                  (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/50 text-bone/80 backdrop-blur-sm'
+                }`}
+              >
+                <span className="text-[1.5em] leading-none" style={{ marginTop: '0.25em' }}>
+                  {extraName}
+                </span>
+                <span className="text-[1.15em] tabular-nums">{p.extra ?? 0}</span>
+              </button>
+            )}
           </div>
+
+          {keypad && (
+            <Keypad
+              life={p.life}
+              onClose={() => setKeypad(false)}
+              onApply={(value) => {
+                dispatch({ t: 'setLife', seat, value });
+                setKeypad(false);
+              }}
+            />
+          )}
 
           {panel && <CounterPanel game={game} seat={seat} dispatch={dispatch} close={() => setPanel(false)} />}
 
@@ -247,6 +334,85 @@ function Count({ label, value, hot }: { label: string; value: number; hot: boole
   );
 }
 
+/** Calls back with the value before and after once it stops changing for a moment. */
+function useSettled<T>(value: T, cb: (before: T, after: T) => void, ms = 1200) {
+  const prev = useRef(value);
+  const start = useRef<{ v: T } | null>(null);
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
+  useEffect(() => {
+    if (value === prev.current) return;
+    start.current ??= { v: prev.current };
+    prev.current = value;
+    const t = window.setTimeout(() => {
+      const b = start.current!.v;
+      start.current = null;
+      if (b !== value) cbRef.current(b, value);
+    }, ms);
+    return () => window.clearTimeout(t);
+  }, [value, ms]);
+}
+
+function KeypadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="1.1em" height="1.1em" fill="currentColor" aria-hidden>
+      {[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={3 + c * 7} y={3 + r * 7} width="4" height="4" rx="1" />))}
+    </svg>
+  );
+}
+
+/** Type a new life total, or an amount gained or lost, instead of tapping. */
+function Keypad({ life, onApply, onClose }: { life: number; onApply: (v: number) => void; onClose: () => void }) {
+  const [mode, setMode] = useState<'set' | 'gain' | 'lose'>('set');
+  const [digits, setDigits] = useState('');
+  const n = Number(digits || 0);
+  const result = mode === 'set' ? n : mode === 'gain' ? life + n : life - n;
+  const press = (k: string) => {
+    if (k === 'back') return setDigits((d) => d.slice(0, -1));
+    setDigits((d) => (d.length >= 7 ? d : (d + k).replace(/^0+(?=\d)/, '')));
+  };
+  const key = 'rounded-lg bg-felt-3 font-cond font-bold active:bg-line';
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col gap-[1.5cqh] bg-felt/97 p-[2.5cqh]" style={{ fontSize: 'clamp(11px, 6cqh, 20px)' }}>
+      <div className="flex items-center gap-[1.2cqw]">
+        {(['set', 'gain', 'lose'] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`rounded-full px-[0.8em] py-[0.25em] ${mode === m ? 'bg-brass font-semibold text-felt' : 'bg-felt-3 text-bone/80'}`}
+          >
+            {m === 'set' ? 'Set' : m === 'gain' ? 'Gain' : 'Lose'}
+          </button>
+        ))}
+        <div className="ml-auto text-right font-cond font-bold tabular-nums">
+          <span className="text-dim">{life} → </span>
+          <span className={digits ? 'text-bone' : 'text-dim'}>{digits ? result : '…'}</span>
+        </div>
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-6 gap-[1cqh]">
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => (
+          <button key={k} onClick={() => press(k)} className={`${key} text-[1.4em]`}>
+            {k}
+          </button>
+        ))}
+        <button onClick={() => press('back')} className={`${key} text-[1.1em] text-dim`} aria-label="Delete digit">
+          ⌫
+        </button>
+        <button onClick={onClose} className={`${key} text-[0.8em] font-sans font-semibold text-dim`}>
+          Cancel
+        </button>
+      </div>
+      <button
+        disabled={!digits}
+        onClick={() => onApply(result)}
+        className="rounded-lg bg-brass py-[1.2cqh] font-semibold text-felt disabled:opacity-40"
+      >
+        {mode === 'set' ? `Set life to ${digits ? result : '…'}` : mode === 'gain' ? `Gain ${n || '…'}` : `Lose ${n || '…'}`}
+      </button>
+    </div>
+  );
+}
+
 /** Running total of recent life changes, cleared after a pause. */
 function useDelta(life: number) {
   const prev = useRef(life);
@@ -284,8 +450,7 @@ function CounterPanel({
       if (op.hasPartner) sources.push({ from: i, partner: 1, who: op.name, label: op.partner?.name ?? 'Partner', colors: c });
     });
   }
-  const extraName = game.config.extraCounter?.trim();
-  const tiles = sources.length + 1 + (extraName ? 1 : 0);
+  const tiles = sources.length + 1;
   const cols = tiles <= 2 ? tiles : tiles <= 6 ? 3 : 4;
 
   return (
@@ -300,17 +465,6 @@ function CounterPanel({
           onPlus={() => dispatch({ t: 'poison', seat, d: 1 })}
           onMinus={() => dispatch({ t: 'poison', seat, d: -1 })}
         />
-        {extraName && (
-          <Tile
-            label={extraName}
-            who="Misplays"
-            value={p.extra ?? 0}
-            lethal={false}
-            stripe={['var(--color-brass)']}
-            onPlus={() => dispatch({ t: 'extra', seat, d: 1 })}
-            onMinus={() => dispatch({ t: 'extra', seat, d: -1 })}
-          />
-        )}
         {sources.map((s) => {
           const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
           return (

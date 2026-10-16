@@ -17,6 +17,7 @@ import Judge, { RuleView } from './pages/Judge';
 import Stats from './pages/Stats';
 import Query from './pages/Query';
 import Sync from './pages/Sync';
+import Join from './pages/Join';
 
 startAutoSync();
 
@@ -34,6 +35,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/stats" element={<Stats />} />
           <Route path="/query" element={<Query />} />
           <Route path="/sync" element={<Sync />} />
+          <Route path="/join/:code" element={<Join />} />
         </Routes>
       </HashRouter>
     </StoreProvider>

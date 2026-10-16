@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { getSync, onSyncChange, setSync, syncNow, syncState, testConnection } from '../sync';
+import QRCode from 'qrcode';
+import { getSync, inviteLink, onSyncChange, setSync, syncNow, syncState, testConnection, type SyncConfig } from '../sync';
 import ConfirmBtn from '../components/ConfirmBtn';
 import { Btn, Page } from '../ui';
 
@@ -113,6 +114,7 @@ export default function Sync() {
             Games sync by themselves when you save one, when the app opens, and every few minutes while it's open. Offline games
             upload when the phone is back online.
           </p>
+          <Invite cfg={cfg} />
           <ConfirmBtn
             variant="quiet"
             onConfirm={() => setSync(null)}
@@ -124,5 +126,56 @@ export default function Sync() {
         </div>
       )}
     </Page>
+  );
+}
+
+/** QR code another phone can scan to join the same game history. */
+function Invite({ cfg }: { cfg: SyncConfig }) {
+  const [open, setOpen] = useState(false);
+  const [svg, setSvg] = useState('');
+  const [copied, setCopied] = useState(false);
+  const link = inviteLink(cfg);
+  useEffect(() => {
+    if (!open) return;
+    QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1b1b1b', light: '#ffffff' } })
+      .then(setSvg)
+      .catch(() => setSvg(''));
+  }, [open, link]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked */
+    }
+  };
+  if (!open)
+    return (
+      <Btn onClick={() => setOpen(true)} className="mt-4">
+        Connect another device
+      </Btn>
+    );
+  return (
+    <div className="mt-4 rounded-xl bg-felt-2 p-4">
+      <div className="mb-1 font-cond text-xl font-bold">Connect another device</div>
+      <p className="mb-3 text-sm text-dim">
+        Scan with the other phone's camera. It opens Spindown already connected to your group's games.
+      </p>
+      {svg ? (
+        <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-lg bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />
+      ) : (
+        <div className="mx-auto aspect-square w-full max-w-[260px] rounded-lg bg-felt-3" />
+      )}
+      <div className="mt-3 flex gap-2">
+        <Btn onClick={copy} className="flex-1 text-sm">
+          {copied ? 'Link copied' : 'Copy invite link'}
+        </Btn>
+        <Btn onClick={() => setOpen(false)} className="text-sm">
+          Hide
+        </Btn>
+      </div>
+      <p className="mt-3 text-xs text-dim">Anyone with this code can add and change games, so only share it with your group.</p>
+    </div>
   );
 }

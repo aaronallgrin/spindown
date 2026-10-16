@@ -50,7 +50,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setGame((g) => {
       if (!g) return g;
       const n = reduce(g, a);
-      if (n !== g) {
+      // easter eggs are a side note, not something to undo
+      if (n !== g && a.t !== 'egg') {
         history.current.push(g);
         if (history.current.length > 300) history.current.shift();
         setCanUndo(true);

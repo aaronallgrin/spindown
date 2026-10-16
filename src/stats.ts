@@ -72,11 +72,15 @@ function tally(
 
 export function summary(games: GameRecord[]) {
   const n = games.length;
-  const avg = (f: (g: GameRecord) => number) => (n ? games.reduce((a, g) => a + f(g), 0) / n : 0);
+  // old imported games have no times, and some have no round count
+  const avg = (f: (g: GameRecord) => number, keep: (g: GameRecord) => boolean) => {
+    const xs = games.filter(keep);
+    return xs.length ? xs.reduce((a, g) => a + f(g), 0) / xs.length : null;
+  };
   return {
     games: n,
-    avgRounds: avg((g) => g.rounds),
-    avgMinutes: avg((g) => g.durationMin),
+    avgRounds: avg((g) => g.rounds, (g) => g.rounds > 0),
+    avgMinutes: avg((g) => g.durationMin, (g) => !g.imported),
     draws: games.filter((g) => !g.winnerName).length,
   };
 }
@@ -117,7 +121,7 @@ export function byDeck(games: GameRecord[]): Row[] {
 }
 
 export function byTurnOrder(games: GameRecord[]): Row[] {
-  const m = tally(games, (p) => String(p.turnOrder), (k) => ordinal(Number(k)));
+  const m = tally(games, (p) => (p.turnOrder ? String(p.turnOrder) : null), (k) => ordinal(Number(k)));
   return [...finish(m)].sort((a, b) => Number(a.key) - Number(b.key));
 }
 
@@ -174,7 +178,7 @@ export function outCauses(games: GameRecord[]) {
 
 export function fastestWins(games: GameRecord[], n = 5) {
   return games
-    .filter((g) => g.winnerName)
+    .filter((g) => g.winnerName && g.rounds > 0)
     .map((g) => ({ g, w: g.players.find((p) => p.result === 'win')! }))
     .sort((a, b) => a.g.rounds - b.g.rounds || a.g.durationMin - b.g.durationMin)
     .slice(0, n);

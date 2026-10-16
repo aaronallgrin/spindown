@@ -85,7 +85,7 @@ export interface LivePlayer {
   lethalDismissed?: boolean;
 }
 
-export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'win' | 'revive' | 'first';
+export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'win' | 'revive' | 'first' | 'egg';
 
 export interface GameEvent {
   at: number;
@@ -97,6 +97,8 @@ export interface GameEvent {
   from?: number;
   partner?: 0 | 1;
   cause?: OutCause;
+  /** easter egg id, for kind 'egg' */
+  egg?: string;
 }
 
 export type Phase = 'seating' | 'choosingFirst' | 'playing' | 'over';
@@ -144,6 +146,8 @@ export interface PlayerResult {
 
 export interface GameRecord {
   id: string;
+  /** brought in from the old spreadsheet: no times, no life log */
+  imported?: boolean;
   format: Format;
   startingLife: number;
   playerCount: number;

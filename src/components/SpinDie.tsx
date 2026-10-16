@@ -57,8 +57,9 @@ export default function SpinDie({
       <button
         ref={ref}
         aria-label={label}
-        className="rounded-full p-3"
-        style={{ touchAction: 'none' }}
+        // invisible touch zone about twice the size of the die, so a sloppy swipe still lands
+        className="rounded-full"
+        style={{ touchAction: 'none', padding: Math.round(size * 0.55) }}
         onPointerDown={(e) => {
           start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
           e.currentTarget.setPointerCapture(e.pointerId);

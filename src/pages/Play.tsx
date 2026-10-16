@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { alive, seated, type Action } from '../game';
+import { alive, seated, toRecord, type Action } from '../game';
+import TrophyList from '../components/Trophies';
 import type { LiveGame } from '../types';
 import SeatEditor from '../components/SeatEditor';
+import { funOn, setFun, toast } from '../components/toastBus';
+import { HATCH, ZENKAI, fmtSecs, trophies } from '../eggs';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
 import Seat from '../components/Seat';
@@ -127,7 +130,23 @@ export default function Play() {
                 ? 'Pick a random first player'
                 : `Round ${game.round}. Spin clockwise for the next round, counterclockwise to go back. Tap for menu.`
             }
-            onSpin={(d) => dispatch({ t: 'round', d })}
+            onSpin={(d) => {
+              dispatch({ t: 'round', d });
+              if (d < 0) return;
+              const said = (seat: number, id: string) =>
+                game.events.some((e) => e.kind === 'egg' && e.seat === seat && e.egg === id);
+              // survived a full round at exactly 1 life
+              if (!funOn()) return;
+              for (const p of game.players)
+                if (p.life === 1 && !p.out && !said(p.seat, ZENKAI.id)) {
+                  dispatch({ t: 'egg', seat: p.seat, egg: ZENKAI.id });
+                  toast(p.seat, ZENKAI.text);
+                }
+              if (game.round + 1 === 108 && game.firstSeat != null && !said(game.firstSeat, HATCH.id)) {
+                dispatch({ t: 'egg', seat: game.firstSeat, egg: HATCH.id });
+                game.players.forEach((p) => toast(p.seat, HATCH.text));
+              }
+            }}
             onTap={() => (game.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : setMenu('main'))}
             spinnable={game.phase === 'playing'}
           />
@@ -135,7 +154,7 @@ export default function Play() {
 
         {game.phase === 'over' && (
           <div className="absolute inset-0 z-30 grid place-items-center bg-black/55 p-4">
-            <div className="w-full max-w-sm rounded-2xl bg-felt-2 p-5 shadow-2xl">
+            <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-2xl bg-felt-2 p-5 shadow-2xl">
               <div className="mb-1 text-sm text-dim">
                 {game.round} {game.round === 1 ? "round" : "rounds"}, {Math.max(1, Math.round(((game.endedAt ?? Date.now()) - game.startedAt) / 60000))} min
               </div>
@@ -155,6 +174,14 @@ export default function Play() {
                 <Btn onClick={() => finish(true)}>Save and rematch</Btn>
                 <TakeBack game={game} dispatch={dispatch} />
               </div>
+              {(() => {
+                const t = trophies(toRecord(game));
+                return t.length ? (
+                  <div className="mt-5 border-t border-line pt-4">
+                    <TrophyList items={t} compact />
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
         )}
@@ -166,6 +193,11 @@ export default function Play() {
                 <div className="flex flex-col gap-2">
                   <div className="mb-2 font-cond text-2xl font-bold">
                     {game.phase === 'playing' ? `Round ${game.round}` : 'Game menu'}
+                    {game.phase === 'playing' && (
+                      <span className="ml-2 font-sans text-sm font-normal text-dim">
+                        {fmtSecs((Date.now() - roundStart(game)) / 1000)} this round
+                      </span>
+                    )}
                   </div>
                   {game.phase === 'playing' && (
                     <div className="flex gap-2">
@@ -187,6 +219,7 @@ export default function Play() {
                     Undo last change
                   </Btn>
                   {game.phase === 'playing' && <Btn onClick={() => setMenu('end')}>End game now</Btn>}
+                  <FunToggle />
                   <Btn onClick={() => nav('/')}>Leave table, keep game</Btn>
                   <ConfirmBtn
                     variant="quiet"
@@ -295,4 +328,26 @@ function TakeBack({ game, dispatch }: { game: LiveGame; dispatch: (a: Action) =>
     );
   }
   return <Btn onClick={() => dispatch({ t: 'takeBackWin' })}>Keep playing</Btn>;
+}
+
+/** when the current round began */
+function roundStart(g: LiveGame) {
+  const e = [...g.events].reverse().find((x) => x.kind === 'turn' || x.kind === 'first');
+  return e?.at ?? g.startedAt;
+}
+
+function FunToggle() {
+  const [on, setOn] = useState(funOn);
+  return (
+    <Btn
+      onClick={() => {
+        setFun(!on);
+        setOn(!on);
+      }}
+      className="flex items-center justify-between"
+    >
+      <span>Fun messages</span>
+      <span className={on ? 'text-brass' : 'text-dim'}>{on ? 'On' : 'Off'}</span>
+    </Btn>
+  );
 }
