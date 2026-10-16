@@ -116,6 +116,8 @@ export default function Stats() {
             <Tile label="Avg length" value={s.avgMinutes == null ? '–' : `${Math.round(s.avgMinutes)} min`} />
           </div>
 
+          <TrophyCase games={games} />
+
           <Section
             title="Players"
             note={`Average place: 1 is a win, 2 is last one knocked out.${fair ? ` The tick on each bar is a fair share of wins, ${pct(fair)}.` : ''}`}
@@ -176,8 +178,6 @@ export default function Stats() {
           />
 
           <RoundTimes games={games} />
-
-          <TrophyCase games={games} />
 
           <Section title="Fastest wins">
             {fastestWins(f.player === 'all' ? games : games.filter((g) => g.winnerName === f.player)).map(({ g, w }) => (
