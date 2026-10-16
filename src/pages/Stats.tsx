@@ -110,13 +110,16 @@ export default function Stats() {
             <Tile label="Avg length" value={s.avgMinutes == null ? '–' : `${Math.round(s.avgMinutes)} min`} />
           </div>
 
-          <Section title="Players" note={fair ? `A fair share of wins at these tables is ${pct(fair)}.` : undefined}>
+          <Section
+            title="Players"
+            note={`Average place: 1 is a win, 2 is last one knocked out.${fair ? ` The tick on each bar is a fair share of wins, ${pct(fair)}.` : ''}`}
+          >
             {byPlayer(games).map((r) => (
               <RateRow
                 key={r.key}
                 row={r}
                 fair={fair}
-                sub={`Avg finish ${(r.extra!.avgPlace as number).toFixed(1)}, * ${r.extra!.misplays}`}
+                sub={`Average place ${(r.extra!.avgPlace as number).toFixed(1)}${(r.extra!.misplays as number) > 0 ? `, ${r.extra!.misplays} *` : ''}`}
               />
             ))}
           </Section>
