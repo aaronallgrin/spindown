@@ -5,22 +5,24 @@ import { db } from '../db';
 import { useStore } from '../store';
 import { makeConfig } from '../game';
 import { defaultLayout, layoutsFor } from '../layouts';
-import type { Format } from '../types';
+import { SUB_FORMATS, type Format } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
 import LayoutThumb from '../components/LayoutThumb';
 import { D20, Pips, Segmented, fmtDate } from '../ui';
 
 const PREFS = 'spindown.newGame';
-type Prefs = { format: Format; players: number; layoutId: string };
+type Prefs = { format: Format; players: number; layoutId: string; sub: Record<string, string> };
+
+const defaultPlayers = (f: Format) => (f === 'commander' ? 4 : 2);
 
 const loadPrefs = (): Prefs => {
   try {
     const p = JSON.parse(localStorage.getItem(PREFS) || 'null');
-    if (p && layoutsFor(p.players, 'portrait').some((l) => l.id === p.layoutId)) return p;
+    if (p && layoutsFor(p.players, 'portrait').some((l) => l.id === p.layoutId)) return { ...p, sub: p.sub ?? {} };
   } catch {
     /* ignore */
   }
-  return { format: 'commander', players: 4, layoutId: 'p4-sides' };
+  return { format: 'commander', players: 4, layoutId: 'p4-sides', sub: {} };
 };
 
 export default function Home() {
@@ -30,10 +32,13 @@ export default function Home() {
   const recent = useLiveQuery(() => db.games.orderBy('startedAt').reverse().limit(3).toArray(), []);
   const count = useLiveQuery(() => db.games.count(), []);
   const layouts = layoutsFor(prefs.players, 'portrait');
+  const subs = prefs.format === 'commander' ? [] : SUB_FORMATS[prefs.format];
+  const subFormat = subs.length ? (subs.find((s) => s.name === prefs.sub[prefs.format]) ?? subs[0]).name : undefined;
 
   const update = (patch: Partial<Prefs>) => {
     const next = { ...prefs, ...patch };
-    if (patch.players) next.layoutId = defaultLayout(patch.players, 'portrait').id;
+    if (patch.format && patch.format !== prefs.format) next.players = defaultPlayers(patch.format);
+    if (next.players !== prefs.players) next.layoutId = defaultLayout(next.players, 'portrait').id;
     setPrefs(next);
     try {
       localStorage.setItem(PREFS, JSON.stringify(next));
@@ -44,7 +49,7 @@ export default function Home() {
 
   const begin = () => {
     if (game) discard();
-    start(makeConfig(prefs.format, prefs.players, prefs.layoutId));
+    start(makeConfig(prefs.format, subFormat, prefs.players, prefs.layoutId));
     nav('/play');
   };
 
@@ -110,10 +115,24 @@ export default function Home() {
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between px-1 text-sm text-dim">
-          <span>Starting life</span>
-          <span className="font-cond text-xl font-bold text-bone">{prefs.format === 'commander' ? 40 : 20}</span>
-        </div>
+        {subs.length > 0 && (
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Format">
+            {subs.map((s) => (
+              <button
+                key={s.name}
+                type="button"
+                role="radio"
+                aria-checked={s.name === subFormat}
+                onClick={() => update({ sub: { ...prefs.sub, [prefs.format]: s.name } })}
+                className={`rounded-lg px-2 py-2.5 text-sm transition ${
+                  s.name === subFormat ? 'bg-brass font-semibold text-felt' : 'bg-felt-3 text-bone hover:bg-line'
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
         {layouts.length > 1 && (
           <div className="flex gap-3">
             {layouts.map((l) => (

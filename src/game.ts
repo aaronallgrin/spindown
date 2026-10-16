@@ -10,6 +10,7 @@ import type {
   PlayerResult,
   PlayerSetup,
 } from './types';
+import { SUB_FORMATS } from './types';
 
 export const POISON_LETHAL = 10;
 export const CMDR_LETHAL = 21;
@@ -17,10 +18,12 @@ export const CMDR_LETHAL = 21;
 export const blankSeat = (): PlayerSetup => ({ name: '', hasPartner: false, colors: [] });
 
 /** House rules: portrait table, commander damage takes life, the * misplay counter. */
-export function makeConfig(format: Format, players: number, layoutId: string): GameConfig {
+export function makeConfig(format: Format, subFormat: string | undefined, players: number, layoutId: string): GameConfig {
+  const sub = format === 'commander' ? undefined : SUB_FORMATS[format].find((f) => f.name === subFormat);
   return {
     format,
-    startingLife: format === 'commander' ? 40 : 20,
+    subFormat: sub?.name,
+    startingLife: format === 'commander' ? 40 : (sub?.life ?? 20),
     orientation: 'portrait',
     layoutId,
     players: Array.from({ length: players }, blankSeat),

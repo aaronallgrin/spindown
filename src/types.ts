@@ -1,4 +1,24 @@
 export type Format = 'commander' | 'constructed' | 'other';
+
+/** formats inside Constructed and Other, with starting life */
+export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, { name: string; life: number }[]> = {
+  constructed: [
+    { name: 'Standard', life: 20 },
+    { name: 'Pioneer', life: 20 },
+    { name: 'Modern', life: 20 },
+    { name: 'Legacy', life: 20 },
+    { name: 'Vintage', life: 20 },
+    { name: 'Pauper', life: 20 },
+  ],
+  other: [
+    { name: 'Draft', life: 20 },
+    { name: 'Sealed', life: 20 },
+    { name: 'Cube', life: 20 },
+    { name: 'Brawl', life: 25 },
+    { name: 'Oathbreaker', life: 20 },
+    { name: 'Casual', life: 20 },
+  ],
+};
 export type Mana = 'W' | 'U' | 'B' | 'R' | 'G';
 export const MANA: Mana[] = ['W', 'U', 'B', 'R', 'G'];
 export type Orientation = 'portrait' | 'landscape';
@@ -34,6 +54,8 @@ export interface PlayerSetup {
 
 export interface GameConfig {
   format: Format;
+  /** e.g. Modern, Draft; not used for Commander */
+  subFormat?: string;
   startingLife: number;
   orientation: Orientation;
   layoutId: string;

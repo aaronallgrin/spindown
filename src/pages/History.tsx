@@ -60,7 +60,7 @@ export default function History() {
               <span className="shrink-0 text-sm text-dim">{fmtDate(g.startedAt)}</span>
             </div>
             <div className="mb-2 text-sm text-dim">
-              {fmtLabel[g.format]}, {g.playerCount} players, {g.rounds} rounds, {g.durationMin} min
+              {g.config.subFormat ?? fmtLabel[g.format]}, {g.playerCount} players, {g.rounds} rounds, {g.durationMin} min
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
               {[...g.players]
