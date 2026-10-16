@@ -155,7 +155,7 @@ export const identityKey = (colors: Mana[]) => MANA.filter((m) => colors.include
 export function byIdentity(games: GameRecord[]): Row[] {
   const m = tally(games, (p) => identityKey(p.colors), (k) => IDENTITY_NAMES[k] ?? k);
   for (const r of m.values()) r.colors = r.key.split('') as Mana[];
-  return [...finish(m)].sort((a, b) => b.games - a.games || b.rate - a.rate);
+  return finish(m);
 }
 
 export function byColorCount(games: GameRecord[]): Row[] {

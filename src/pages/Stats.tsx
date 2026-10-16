@@ -4,8 +4,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import {
   applyFilters,
-  byBracket,
-  byColor,
   byColorCount,
   byIdentity,
   byDeck,
@@ -20,7 +18,7 @@ import {
   type Filters,
   type Row,
 } from '../stats';
-import { BracketTag, Page, Pips, fmtDate } from '../ui';
+import { Page, Pips, fmtDate } from '../ui';
 import { CardNames } from '../components/CardName';
 import { TrophyIcon } from '../components/Trophies';
 import type { GameRecord } from '../types';
@@ -125,7 +123,7 @@ export default function Stats() {
             ))}
           </Section>
 
-          <Section title={isCmdr ? 'Commanders' : 'Decks'}>
+          <Section title={isCmdr ? 'Commander win rate' : 'Deck win rate'} note="Most wins first. Tap a name to see the card.">
             {byDeck(forPlayer)
               .slice(0, 15)
               .map((r) => (
@@ -146,31 +144,18 @@ export default function Stats() {
             ))}
           </Section>
 
-          <Section title="Color identities">
+          <Section title="Color identity win rate" note="Most wins first, then best win rate.">
             {byIdentity(forPlayer).map((r) => (
               <RateRow key={r.key} row={r} fair={fair} pips />
             ))}
           </Section>
 
-          <Section title="Number of colors">
+          <Section title="Commander color win rate" note="By how many colors the commander has.">
             {byColorCount(forPlayer).map((r) => (
               <RateRow key={r.key} row={r} fair={fair} />
             ))}
           </Section>
 
-          <Section title="By color" note="Every deck that includes the color, alone or with others.">
-            {byColor(forPlayer).map((r) => (
-              <RateRow key={r.key} row={r} fair={fair} pips />
-            ))}
-          </Section>
-
-          {byBracket(forPlayer).length > 0 && (
-            <Section title="Brackets">
-              {byBracket(forPlayer).map((r) => (
-                <RateRow key={r.key} row={r} fair={fair} label={<BracketTag n={Number(r.key)} />} />
-              ))}
-            </Section>
-          )}
 
           <CountSection title="How players went out" rows={outCauses(forPlayer)} />
 
