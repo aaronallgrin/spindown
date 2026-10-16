@@ -20,6 +20,7 @@ import {
 } from '../stats';
 import { Page, Pips, fmtDate } from '../ui';
 import { CardNames } from '../components/CardName';
+import StatsTabs from '../components/StatsTabs';
 import { TrophyIcon } from '../components/Trophies';
 import type { GameRecord } from '../types';
 import { TROPHY_INFO, eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
@@ -56,10 +57,16 @@ export default function Stats() {
   const forPlayer = f.player === 'all' ? games : games.map((g) => ({ ...g, players: g.players.filter((p) => p.name === f.player) }));
   const isCmdr = f.format === 'commander' || (f.format === 'all' && games.some((g) => g.format === 'commander'));
 
-  if (all === undefined) return <Page title="Stats">{null}</Page>;
+  if (all === undefined)
+    return (
+      <Page title="Stats">
+        <StatsTabs active="stats" />
+      </Page>
+    );
 
   return (
     <Page title="Stats">
+      <StatsTabs active="stats" />
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Select
           label="Format"

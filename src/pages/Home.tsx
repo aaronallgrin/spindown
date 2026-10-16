@@ -9,6 +9,8 @@ import { defaultLayout, layoutsFor } from '../layouts';
 import { SUB_FORMATS, type Format } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
 import SeatMap from '../components/SeatMap';
+import { usePress } from '../components/usePress';
+import type { Layout } from '../layouts';
 import { Ask, Bars, Cloud, Gavel } from '../components/icons';
 import { D20, Pips, fmtDate } from '../ui';
 
@@ -114,7 +116,7 @@ export default function Home() {
             value={prefs.kind}
             onChange={(kind) => update({ kind })}
             options={[
-              { v: 'commander', title: 'Commander', sub: '40 life' },
+              { v: 'commander', title: 'Commander', sub: 'EDH' },
               { v: 'other', title: 'Other', sub: prefs.kind === 'other' ? prefs.other.sub : 'Constructed, draft, more' },
             ]}
           />
@@ -186,11 +188,7 @@ export default function Home() {
           {layouts.length > 1 && (
             <>
               <Label className="mt-5">Seating</Label>
-              <div className="flex justify-center gap-3">
-                {layouts.map((l) => (
-                  <SeatMap key={l.id} layout={l} selected={l.id === prefs.layoutId} onClick={() => update({ layoutId: l.id })} />
-                ))}
-              </div>
+              <SeatPills layouts={layouts} value={prefs.layoutId} onChange={(layoutId) => update({ layoutId })} />
             </>
           )}
 
@@ -208,7 +206,7 @@ export default function Home() {
         <nav className="mb-8 grid grid-cols-2 gap-2.5">
           {[
             { to: '/judge', title: 'Ask a Judge', sub: 'Rules, rulings', icon: <Gavel /> },
-            { to: '/stats', title: 'Stats', sub: 'Win rates', icon: <Bars /> },
+            { to: '/stats', title: 'Stats', sub: 'Win rates, games', icon: <Bars /> },
             { to: '/query', title: 'Query', sub: 'Ask your games', icon: <Ask /> },
             { to: '/sync', title: 'Cloud sync', sub: syncOn ? 'On' : 'Back up games', icon: <Cloud /> },
           ].map((t) => (
@@ -307,5 +305,49 @@ function Choice<T extends string>({
         );
       })}
     </div>
+  );
+}
+
+/** Seating as plain pills; press and hold one to see where everyone sits. */
+function SeatPills({ layouts, value, onChange }: { layouts: Layout[]; value: string; onChange: (id: string) => void }) {
+  const [peek, setPeek] = useState<Layout | null>(null);
+  return (
+    <div className="relative">
+      <div className="flex rounded-full bg-white/[.05] p-1 ring-1 ring-white/[.05]" role="radiogroup" aria-label="Seating">
+        {layouts.map((l) => (
+          <SeatPill key={l.id} layout={l} on={l.id === value} onPick={() => onChange(l.id)} onPeek={setPeek} />
+        ))}
+      </div>
+      <p className="mt-1.5 text-center text-[11px] text-dim">Press and hold to see the seats</p>
+      {peek && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 rounded-2xl bg-felt p-2 shadow-2xl ring-1 ring-white/10">
+          <SeatMap layout={peek} selected onClick={() => {}} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SeatPill({ layout, on, onPick, onPeek }: { layout: Layout; on: boolean; onPick: () => void; onPeek: (l: Layout | null) => void }) {
+  const press = usePress(onPick, () => onPeek(layout), 380, 1e9);
+  const end = (f: () => void) => () => {
+    f();
+    onPeek(null);
+  };
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      {...press}
+      onPointerUp={end(press.onPointerUp)}
+      onPointerLeave={end(press.onPointerLeave)}
+      onPointerCancel={end(press.onPointerCancel)}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onPick()}
+      className={`flex-1 select-none rounded-full px-2 py-2 text-sm transition ${on ? 'bg-bone font-semibold text-felt shadow' : 'text-dim hover:text-bone'}`}
+      style={{ WebkitTouchCallout: 'none' }}
+    >
+      {layout.label}
+    </button>
   );
 }

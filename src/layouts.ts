@@ -28,8 +28,8 @@ const L = (
 export const LAYOUTS: Layout[] = [
   L('p2', 'Head to head', 'portrait', ['a', 'b'], [180, 0]),
   L('p3', 'One end, two sides', 'portrait', ['a a', 'c b'], [180, 270, 90]),
-  L('p4-sides', 'Two each side', 'portrait', ['a b', 'd c'], [90, 270, 270, 90]),
-  L('p4-ends', 'One per side', 'portrait', ['a a', 'd b', 'c c'], [180, 270, 0, 90]),
+  L('p4-sides', 'Standard', 'portrait', ['a b', 'd c'], [90, 270, 270, 90]),
+  L('p4-ends', 'Four sides', 'portrait', ['a a', 'd b', 'c c'], [180, 270, 0, 90]),
   L('p5', 'Two, two, one end', 'portrait', ['a b', 'e c', 'd d'], [90, 270, 270, 0, 90]),
   L('p6', 'Three each side', 'portrait', ['a b', 'f c', 'e d'], [90, 270, 270, 270, 90, 90]),
 ];

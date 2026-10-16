@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, exportAll, importAll } from '../db';
 import { Btn, Page, Pips, fmtDate } from '../ui';
+import StatsTabs from '../components/StatsTabs';
 
 const fmtLabel = { commander: 'Commander', constructed: 'Constructed', other: 'Other' };
 
@@ -30,7 +31,8 @@ export default function History() {
   };
 
   return (
-    <Page title="Game history">
+    <Page title="Stats">
+      <StatsTabs active="games" />
       <div className="mb-4 flex gap-2">
         <Btn onClick={doExport} disabled={!games?.length} className="flex-1 text-sm">
           Export backup
