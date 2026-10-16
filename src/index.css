@@ -1,0 +1,156 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-felt: #17201b;
+  --color-felt-2: #212c26;
+  --color-felt-3: #2b3832;
+  --color-line: #3a4a42;
+  --color-bone: #ece5d3;
+  --color-dim: #9aa79f;
+  --color-brass: #c9a24a;
+  --color-brass-2: #e7c877;
+  --color-blood: #d2492f;
+  --color-mana-w: #efe3bc;
+  --color-mana-u: #3f7cc0;
+  --color-mana-b: #7a6a80;
+  --color-mana-r: #d2492f;
+  --color-mana-g: #3e8e52;
+  --color-mana-c: #8e918f;
+  --font-sans: 'Barlow', system-ui, sans-serif;
+  --font-cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-felt);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass-2);
+  outline-offset: 2px;
+}
+
+/* ---------- play table ---------- */
+
+.table-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  background: #0d120f;
+}
+
+.table {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  translate: -50% -50%;
+}
+
+/* seat cell: a size container so the rotated face can swap its axes */
+.seat {
+  position: relative;
+  container-type: size;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.face {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100cqw;
+  height: 100cqh;
+  translate: -50% -50%;
+}
+.face.r90 {
+  width: 100cqh;
+  height: 100cqw;
+  rotate: 90deg;
+}
+.face.r180 {
+  rotate: 180deg;
+}
+.face.r270 {
+  width: 100cqh;
+  height: 100cqw;
+  rotate: 270deg;
+}
+
+.face-inner {
+  container-type: size;
+  position: absolute;
+  inset: 0;
+}
+
+.life-num {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: clamp(48px, min(46cqh, 34cqw), 260px);
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.55);
+}
+
+.delta {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: clamp(18px, 11cqh, 44px);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.7);
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 30%;
+  filter: saturate(0.85);
+}
+
+.active-ring {
+  box-shadow:
+    inset 0 0 0 3px var(--color-brass-2),
+    inset 0 0 32px rgb(231 200 119 / 0.35);
+}
+
+.d20 {
+  filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.6));
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -30%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
