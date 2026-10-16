@@ -1,6 +1,6 @@
 import type { Database, SqlJsStatic } from 'sql.js';
 import type { GameRecord } from './types';
-import { places } from './stats';
+import { IDENTITY_NAMES, identityKey, places } from './stats';
 import { roundSeconds, trophies } from './eggs';
 
 let SQL: Promise<SqlJsStatic> | null = null;
@@ -18,7 +18,7 @@ async function engine() {
 
 export const SCHEMA = `games(id, date, format, sub_format, players, rounds, minutes, winner)
 players(game_id, date, format, sub_format, name, seat, turn_order, place, result, won,
-        commander, partner, deck, theme, colors, color_count, bracket,
+        commander, partner, deck, theme, colors, identity, color_count, bracket,
         out_round, out_cause, final_life, poison, cmdr_damage_taken, misplays)
 events(game_id, at, round, player, kind, delta, from_player, cause)
 rounds(game_id, date, players, round, seconds)
@@ -33,7 +33,7 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
   d.run(`
     CREATE TABLE games(id TEXT PRIMARY KEY, date TEXT, format TEXT, sub_format TEXT, players INT, rounds INT, minutes INT, winner TEXT);
     CREATE TABLE players(game_id TEXT, date TEXT, format TEXT, sub_format TEXT, name TEXT, seat INT, turn_order INT, place INT,
-      result TEXT, won INT, commander TEXT, partner TEXT, deck TEXT, theme TEXT, colors TEXT, color_count INT, bracket TEXT,
+      result TEXT, won INT, commander TEXT, partner TEXT, deck TEXT, theme TEXT, colors TEXT, identity TEXT, color_count INT, bracket TEXT,
       out_round INT, out_cause TEXT, final_life INT, poison INT, cmdr_damage_taken INT, misplays INT);
     CREATE TABLE events(game_id TEXT, at TEXT, round INT, player TEXT, kind TEXT, delta INT, from_player TEXT, cause TEXT);
     CREATE TABLE rounds(game_id TEXT, date TEXT, players INT, round INT, seconds INT);
@@ -42,7 +42,7 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
   const ri = d.prepare('INSERT INTO rounds VALUES (?,?,?,?,?)');
   const ti = d.prepare('INSERT INTO trophies VALUES (?,?,?,?)');
   const gi = d.prepare('INSERT INTO games VALUES (?,?,?,?,?,?,?,?)');
-  const pi = d.prepare('INSERT INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+  const pi = d.prepare('INSERT INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
   const ei = d.prepare('INSERT INTO events VALUES (?,?,?,?,?,?,?,?)');
   d.run('BEGIN');
   for (const g of games) {
@@ -67,6 +67,7 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
         p.deckName ?? null,
         p.theme ?? null,
         p.colors.join(''),
+        IDENTITY_NAMES[identityKey(p.colors)] ?? null,
         p.colors.length,
         p.bracket == null ? null : p.bracket === 0 ? 'P' : String(p.bracket),
         p.outRound ?? null,

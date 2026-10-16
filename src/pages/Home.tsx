@@ -258,8 +258,10 @@ export default function Home() {
 
         <footer className="mt-auto pt-12 text-center text-[11px] leading-relaxed text-dim/80">
           <p className="mb-1 font-medium text-dim">Special thanks to</p>
-          <p>Rachiepie</p>
+          <p>Rachiepie, Partner</p>
           <p>TJ Scales, SVP and Director of Quality Improvement</p>
+          <p>Drew Garza, Advisor</p>
+          <p>Ben Perez, Consulting Senior Software Engineer</p>
           <p>Vikeo</p>
           <p>My local pod</p>
           <p>Queen &amp; Rooke</p>
