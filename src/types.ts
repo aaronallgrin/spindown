@@ -16,6 +16,8 @@ export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, { name: string; l
     { name: 'Cube', life: 20 },
     { name: 'Brawl', life: 25 },
     { name: 'Oathbreaker', life: 20 },
+    { name: 'Dandân', life: 20 },
+    { name: 'Pai Gow', life: 20 },
     { name: 'Casual', life: 20 },
   ],
 };
