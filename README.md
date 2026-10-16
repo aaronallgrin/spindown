@@ -19,6 +19,17 @@ npm run build
 
 Data lives on the device (IndexedDB). Use History, then Export backup to save a JSON copy.
 
+## Find a game
+Availability polls for the group, kept in the same Supabase project as cloud sync.
+Run `supabase/polls.sql` once in the Supabase SQL Editor to add the `polls` and `poll_responses` tables.
+
+- Home, Find a game, Start a poll: format (brackets for Commander), up to 7 days, hours, game length, players needed.
+- Share sends a link that carries the group's connection, so friends open it and answer with just their name. No accounts and no cloud sync setup.
+- Everyone paints their free hours. The poll ranks the best windows that fit the whole game and shows who can make each.
+- The host locks in a time. Everyone can then add it to Apple Calendar (an .ics file) or Google Calendar.
+
+Anyone with a poll link can read and change polls and their answers, the same trust model as the sync invite. Only share it with your group.
+
 ## Rules data
 `public/rules.json` is generated from the official Comprehensive Rules PDF:
 ```

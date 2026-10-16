@@ -149,9 +149,10 @@ export function startAutoSync() {
 const b64url = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64url = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 
+export const encodeInvite = (c: SyncConfig) => b64url(JSON.stringify({ u: c.url, k: c.key }));
+
 export function inviteLink(c: SyncConfig) {
-  const code = b64url(JSON.stringify({ u: c.url, k: c.key }));
-  return `${location.origin}${location.pathname}#/join/${code}`;
+  return `${location.origin}${location.pathname}#/join/${encodeInvite(c)}`;
 }
 
 export function decodeInvite(code: string): SyncConfig | null {
