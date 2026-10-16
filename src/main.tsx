@@ -10,6 +10,7 @@ import './index.css';
 import { StoreProvider } from './store';
 import { startAutoSync } from './sync';
 import Home from './pages/Home';
+import NewGame from './pages/NewGame';
 import Play from './pages/Play';
 import History from './pages/History';
 import GameDetail from './pages/GameDetail';
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
       <HashRouter>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/new" element={<NewGame />} />
           <Route path="/play" element={<Play />} />
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<GameDetail />} />
