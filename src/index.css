@@ -167,3 +167,23 @@ button {
 .whisper {
   animation: whisper 4.2s ease-out forwards;
 }
+
+/* ---------- home ---------- */
+.home-glow {
+  background:
+    radial-gradient(90% 50% at 85% -10%, rgb(255 163 26 / 0.13), transparent 60%),
+    radial-gradient(70% 40% at 0% 0%, rgb(255 255 255 / 0.04), transparent 70%);
+}
+.new-game-card {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgb(255 163 26 / 0.12), transparent 65%),
+    linear-gradient(180deg, #2c2c2c, #232323);
+  box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.8);
+}
+@keyframes rollIn {
+  from { rotate: -220deg; scale: 0.6; opacity: 0; }
+  to { rotate: 0deg; scale: 1; opacity: 1; }
+}
+.roll-in {
+  animation: rollIn 900ms cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}

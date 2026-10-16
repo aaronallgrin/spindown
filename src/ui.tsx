@@ -106,16 +106,22 @@ export function Btn({ variant = 'quiet', className = '', ...p }: BtnProps) {
       ? 'bg-brass text-felt hover:bg-brass-2 font-semibold'
       : variant === 'danger'
         ? 'bg-blood/90 text-bone hover:bg-blood'
-        : 'bg-felt-3 text-bone hover:bg-line';
-  return <button {...p} className={`rounded-lg px-4 py-2.5 transition disabled:opacity-40 ${v} ${className}`} />;
+        : 'bg-white/[.06] text-bone hover:bg-white/10';
+  return <button {...p} className={`rounded-xl px-4 py-2.5 transition active:scale-[.98] disabled:opacity-40 ${v} ${className}`} />;
 }
 
 export function Page({ title, back = '/', children, action }: { title: string; back?: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mx-auto min-h-full max-w-2xl px-4 pb-24 pt-4">
-      <header className="mb-5 flex items-center gap-3">
-        <Link to={back} className="rounded-lg px-2 py-1 text-2xl text-dim hover:text-bone" aria-label="Back">
-          ‹
+    <div className="mx-auto min-h-full max-w-2xl px-4 pb-24">
+      <header className="sticky top-0 z-30 -mx-4 mb-4 flex items-center gap-3 bg-felt/80 px-4 pb-3 pt-4 backdrop-blur-md">
+        <Link
+          to={back}
+          className="grid h-9 w-9 place-items-center rounded-full bg-white/[.06] text-bone/80 transition hover:bg-white/10 hover:text-bone"
+          aria-label="Back"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
         </Link>
         <h1 className="flex-1 font-cond text-3xl font-bold tracking-wide">{title}</h1>
         {action}
@@ -137,7 +143,7 @@ export function Segmented<T extends string | number>({
   label: string;
 }) {
   return (
-    <div className="flex rounded-lg bg-felt-2 p-1" role="radiogroup" aria-label={label}>
+    <div className="flex rounded-full bg-white/[.05] p-1 ring-1 ring-white/[.05]" role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button
           key={String(o.v)}
@@ -145,8 +151,8 @@ export function Segmented<T extends string | number>({
           role="radio"
           aria-checked={value === o.v}
           onClick={() => onChange(o.v)}
-          className={`flex-1 rounded-md px-2 py-2 text-sm transition ${
-            value === o.v ? 'bg-felt-3 font-semibold text-bone shadow-inner' : 'text-dim hover:text-bone'
+          className={`flex-1 rounded-full px-2 py-2 text-sm transition ${
+            value === o.v ? 'bg-bone font-semibold text-felt shadow' : 'text-dim hover:text-bone'
           }`}
         >
           {o.label}
