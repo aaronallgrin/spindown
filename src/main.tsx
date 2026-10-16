@@ -18,6 +18,8 @@ import Stats from './pages/Stats';
 import Query from './pages/Query';
 import Sync from './pages/Sync';
 import Join from './pages/Join';
+import FindGame, { NewPoll } from './pages/FindGame';
+import Poll from './pages/Poll';
 
 startAutoSync();
 
@@ -36,6 +38,9 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/query" element={<Query />} />
           <Route path="/sync" element={<Sync />} />
           <Route path="/join/:code" element={<Join />} />
+          <Route path="/find" element={<FindGame />} />
+          <Route path="/find/new" element={<NewPoll />} />
+          <Route path="/poll/:id" element={<Poll />} />
         </Routes>
       </HashRouter>
     </StoreProvider>

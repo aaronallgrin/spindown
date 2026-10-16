@@ -11,7 +11,7 @@ import ConfirmBtn from '../components/ConfirmBtn';
 import SeatMap from '../components/SeatMap';
 import { usePress } from '../components/usePress';
 import type { Layout } from '../layouts';
-import { Ask, Bars, Cloud, Gavel } from '../components/icons';
+import { Ask, Bars, Calendar, Cloud, Gavel } from '../components/icons';
 import { D20, Pips, fmtDate } from '../ui';
 
 const PREFS = 'spindown.newGame.v2';
@@ -193,6 +193,18 @@ export default function Home() {
         </section>
 
         <nav className="mb-8 grid grid-cols-2 gap-2.5">
+          <Link
+            to="/find"
+            className="group col-span-2 flex items-center gap-3 rounded-2xl bg-felt-2/80 px-3.5 py-3 ring-1 ring-brass/40 transition hover:bg-felt-3"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brass text-felt">
+              <Calendar />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-cond text-lg font-bold leading-tight">Find a game</span>
+              <span className="block truncate text-xs text-dim">Poll the group, pick a night, add it to calendars</span>
+            </span>
+          </Link>
           {[
             { to: '/judge', title: 'Ask a Judge', sub: 'Rules, rulings', icon: <Gavel /> },
             { to: '/stats', title: 'Stats', sub: 'Win rates, games', icon: <Bars /> },
