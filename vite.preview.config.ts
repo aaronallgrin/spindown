@@ -6,6 +6,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 export default defineConfig({
   base: './',
+  define: { __BUILD_DATE__: JSON.stringify('preview') },
   plugins: [react(), tailwindcss(), viteSingleFile()],
   build: { outDir: 'dist-preview', assetsInlineLimit: 100_000_000 },
 });

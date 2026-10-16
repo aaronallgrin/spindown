@@ -15,6 +15,7 @@ export default function SpinDie({
   onSpin,
   onTap,
   label,
+  spinnable = true,
 }: {
   value: string | number;
   size: number;
@@ -24,6 +25,7 @@ export default function SpinDie({
   onSpin: (dir: 1 | -1) => void;
   onTap: () => void;
   label: string;
+  spinnable?: boolean;
 }) {
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const ref = useRef<HTMLButtonElement>(null);
@@ -35,7 +37,7 @@ export default function SpinDie({
     if (!s || s.id !== e.pointerId || !ref.current) return;
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
-    if (Math.hypot(dx, dy) < 14) return onTap();
+    if (Math.hypot(dx, dy) < 14 || !spinnable) return onTap();
     const r = ref.current.getBoundingClientRect();
     const rx = s.x - (r.left + r.width / 2);
     const ry = s.y - (r.top + r.height / 2);

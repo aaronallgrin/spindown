@@ -12,10 +12,11 @@ interface Props {
   rot: Rot;
   area: string;
   headerPad?: { side: 'left' | 'right' | 'both'; px: number } | null;
+  onEdit: () => void;
   dispatch: (a: Action) => void;
 }
 
-export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Props) {
+export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatch }: Props) {
   const p = game.players[seat];
   const setup = game.config.players[seat];
   const [panel, setPanel] = useState(false);
@@ -127,6 +128,42 @@ export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Pro
           </div>
 
           {panel && <CounterPanel game={game} seat={seat} dispatch={dispatch} close={() => setPanel(false)} />}
+
+          {game.phase === 'seating' && (
+            <button
+              onClick={onEdit}
+              className={`absolute inset-0 flex flex-col items-center justify-center gap-[1.5cqh] px-4 text-center ${
+                setup.name ? 'bg-black/90' : 'bg-felt-2'
+              }`}
+            >
+              {setup.name ? (
+                <>
+                  <span className="font-cond font-bold" style={{ fontSize: 'clamp(18px, 12cqh, 44px)' }}>
+                    {setup.name}
+                  </span>
+                  <span className="max-w-full truncate text-bone/80" style={{ fontSize: 'clamp(11px, 6cqh, 18px)' }}>
+                    {setup.commander?.name ?? setup.deckName ?? ''}
+                    {setup.hasPartner && setup.partner ? ` + ${setup.partner.name}` : ''}
+                  </span>
+                  <span className="text-dim" style={{ fontSize: 'clamp(10px, 5cqh, 15px)' }}>
+                    Tap to change
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="grid aspect-square place-items-center rounded-full bg-brass font-cond font-bold text-felt"
+                    style={{ width: 'clamp(28px, 16cqh, 56px)', fontSize: 'clamp(16px, 10cqh, 34px)' }}
+                  >
+                    +
+                  </span>
+                  <span className="font-cond font-bold" style={{ fontSize: 'clamp(16px, 10cqh, 36px)' }}>
+                    Tap to sit here
+                  </span>
+                </>
+              )}
+            </button>
+          )}
 
           {game.phase === 'choosingFirst' && (
             <button

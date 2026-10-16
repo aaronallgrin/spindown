@@ -74,7 +74,7 @@ export interface GameEvent {
   cause?: OutCause;
 }
 
-export type Phase = 'choosingFirst' | 'playing' | 'over';
+export type Phase = 'seating' | 'choosingFirst' | 'playing' | 'over';
 
 export interface LiveGame {
   id: string;

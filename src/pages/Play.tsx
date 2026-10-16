@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { alive } from '../game';
+import { alive, seated } from '../game';
+import SeatEditor from '../components/SeatEditor';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
 import Seat from '../components/Seat';
@@ -48,6 +49,7 @@ export default function Play() {
   const nav = useNavigate();
   const vp = useViewport();
   const [menu, setMenu] = useState<null | 'main' | 'end'>(null);
+  const [editing, setEditing] = useState<number | null>(null);
   useWakeLock();
 
   if (!game) return <Navigate to="/" replace />;
@@ -96,23 +98,37 @@ export default function Play() {
             rot={layout.rot[p.seat]}
             area={seatLetter(p.seat)}
             headerPad={pads[p.seat]}
+            onEdit={() => setEditing(p.seat)}
             dispatch={dispatch}
           />
         ))}
 
-        {game.phase !== 'over' && (
+        {game.phase === 'seating' && seated(game) && (
+          <button
+            onClick={() => dispatch({ t: 'ready' })}
+            className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-brass px-5 py-3 font-cond text-xl font-bold leading-tight text-felt shadow-2xl"
+          >
+            Everyone's in
+            <span className="block font-sans text-sm font-semibold">Pick who goes first</span>
+          </button>
+        )}
+
+        {game.phase !== 'over' && !(game.phase === 'seating' && seated(game)) && (
           <SpinDie
-            value={game.phase === 'choosingFirst' ? '?' : game.round}
+            value={game.phase === 'playing' ? game.round : game.phase === 'choosingFirst' ? '?' : ''}
             size={d20Size}
             facing={facing}
             hint={game.phase === 'playing' && !spunYet ? 'Spin clockwise for round 2' : undefined}
             label={
-              game.phase === 'choosingFirst'
+              game.phase === 'seating'
+                ? 'Game menu'
+                : game.phase === 'choosingFirst'
                 ? 'Pick a random first player'
                 : `Round ${game.round}. Spin clockwise for the next round, counterclockwise to go back. Tap for menu.`
             }
             onSpin={(d) => dispatch({ t: 'round', d })}
             onTap={() => (game.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : setMenu('main'))}
+            spinnable={game.phase === 'playing'}
           />
         )}
 
@@ -216,6 +232,20 @@ export default function Play() {
           </div>
         )}
       </div>
+      {editing != null && (
+        <SeatEditor
+          seat={editing}
+          format={game.config.format}
+          initial={game.config.players[editing]}
+          takenNames={game.config.players.filter((_, i) => i !== editing).map((p) => p.name).filter(Boolean)}
+          onClose={() => setEditing(null)}
+          onSave={(setup) => {
+            dispatch({ t: 'seatInfo', seat: editing, setup });
+            setEditing(null);
+          }}
+        />
+      )}
+
     </div>
   );
 }

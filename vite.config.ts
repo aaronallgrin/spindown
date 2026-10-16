@@ -3,8 +3,12 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// the version shown on Home is the date of the latest deploy, Philadelphia time
+const buildDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).replaceAll('-', '_');
+
 export default defineConfig({
   base: './',
+  define: { __BUILD_DATE__: JSON.stringify(buildDate) },
   plugins: [
     react(),
     tailwindcss(),

@@ -1,5 +1,6 @@
 import type {
   EventKind,
+  Format,
   GameConfig,
   GameEvent,
   GameRecord,
@@ -7,17 +8,36 @@ import type {
   LivePlayer,
   OutCause,
   PlayerResult,
+  PlayerSetup,
 } from './types';
 
 export const POISON_LETHAL = 10;
 export const CMDR_LETHAL = 21;
 
+export const blankSeat = (): PlayerSetup => ({ name: '', hasPartner: false, colors: [] });
+
+/** House rules: portrait table, commander damage takes life, the * misplay counter. */
+export function makeConfig(format: Format, players: number, layoutId: string): GameConfig {
+  return {
+    format,
+    startingLife: format === 'commander' ? 40 : 20,
+    orientation: 'portrait',
+    layoutId,
+    players: Array.from({ length: players }, blankSeat),
+    cmdrDamageLosesLife: true,
+    extraCounter: '*',
+  };
+}
+
+export const seated = (g: LiveGame) => g.config.players.every((p) => p.name.trim());
+
 export function newGame(config: GameConfig): LiveGame {
+  const filled = config.players.every((p) => p.name.trim());
   return {
     id: crypto.randomUUID(),
     config,
     startedAt: Date.now(),
-    phase: 'choosingFirst',
+    phase: filled ? 'choosingFirst' : 'seating',
     pickedSeat: null,
     firstSeat: null,
     activeSeat: null,
@@ -41,6 +61,8 @@ export type Action =
   | { t: 'poison'; seat: number; d: number }
   | { t: 'cmdr'; seat: number; from: number; partner: 0 | 1; d: number }
   | { t: 'monarch'; seat: number }
+  | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
+  | { t: 'ready' }
   | { t: 'pick'; seat: number }
   | { t: 'random' }
   | { t: 'extra'; seat: number; d: number }
@@ -154,6 +176,14 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: seat ?? -1, kind: 'monarch' }],
       };
     }
+    case 'seatInfo': {
+      if (g.phase !== 'seating' && g.phase !== 'choosingFirst') return g;
+      const players = g.config.players.map((p, i) => (i === a.seat ? a.setup : p));
+      return { ...g, config: { ...g.config, players } };
+    }
+    case 'ready':
+      if (g.phase !== 'seating' || !seated(g)) return g;
+      return { ...g, phase: 'choosingFirst', pickedSeat: null };
     case 'pick': {
       if (g.phase !== 'choosingFirst') return g;
       if (g.pickedSeat !== a.seat) return { ...g, pickedSeat: a.seat };
