@@ -100,3 +100,33 @@ export async function getRulings(name: string): Promise<CardRulings> {
     rulings: rulings.map((x: any) => ({ date: x.published_at, source: x.source, text: x.comment })),
   };
 }
+
+const IMG_CACHE = 'spindown.cardImages';
+
+/** Full card images (both faces for double-faced cards) for a card name. */
+export async function getCardImages(name: string): Promise<{ name: string; images: string[]; uri?: string }> {
+  let cache: Record<string, { name: string; images: string[]; uri?: string }> = {};
+  try {
+    cache = JSON.parse(localStorage.getItem(IMG_CACHE) || '{}');
+  } catch {
+    /* ignore */
+  }
+  const key = name.toLowerCase();
+  if (cache[key]) return cache[key];
+  const front = name.split(' // ')[0];
+  let res = await fetch(`${API}/cards/named?exact=${encodeURIComponent(front)}`);
+  if (!res.ok) res = await fetch(`${API}/cards/named?fuzzy=${encodeURIComponent(front)}`);
+  if (!res.ok) throw new Error(`No card found for “${name}”.`);
+  const c = await res.json();
+  const images: string[] = c.image_uris?.normal
+    ? [c.image_uris.normal]
+    : (c.card_faces ?? []).map((f: { image_uris?: { normal?: string } }) => f.image_uris?.normal).filter(Boolean);
+  const out = { name: c.name as string, images, uri: c.scryfall_uri as string | undefined };
+  cache[key] = out;
+  try {
+    localStorage.setItem(IMG_CACHE, JSON.stringify(cache));
+  } catch {
+    /* ignore */
+  }
+  return out;
+}

@@ -11,12 +11,13 @@
   --color-brass: #ffa31a;
   --color-brass-2: #ff9902;
   --color-blood: #d2492f;
-  --color-mana-w: #efe3bc;
-  --color-mana-u: #3f7cc0;
-  --color-mana-b: #7a6a80;
-  --color-mana-r: #d2492f;
-  --color-mana-g: #3e8e52;
-  --color-mana-c: #8e918f;
+  /* mana symbol fills, as printed on cards */
+  --color-mana-w: #fffbd5;
+  --color-mana-u: #aae0fa;
+  --color-mana-b: #cbc2bf;
+  --color-mana-r: #f9aa8f;
+  --color-mana-g: #9bd3ae;
+  --color-mana-c: #ccc2c0;
   --font-sans: 'Barlow', system-ui, sans-serif;
   --font-cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 }

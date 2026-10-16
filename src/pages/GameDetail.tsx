@@ -2,11 +2,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { queueDelete, syncNow } from '../sync';
-import { BRACKETS } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
 import TrophyList from '../components/Trophies';
 import { eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
-import { Page, Pips, causeLabel, fmtDate } from '../ui';
+import { BracketTag, Page, Pips, causeLabel, fmtDate } from '../ui';
+import CardName from '../components/CardName';
 
 export default function GameDetail() {
   const { id } = useParams();
@@ -45,21 +45,35 @@ export default function GameDetail() {
               {p.turnOrder > 0 && <span className="ml-auto text-sm text-dim">went {ordinal(p.turnOrder)}</span>}
             </div>
             <div className="mt-0.5 text-bone/80">
-              {p.commander ?? p.deckName ?? 'No deck recorded'}
-              {p.partner ? ` + ${p.partner}` : ''}
+              {p.commander ? <CardName name={p.commander} /> : (p.deckName ?? 'No deck recorded')}
+              {p.partner && (
+                <>
+                  {' + '}
+                  <CardName name={p.partner} />
+                </>
+              )}
               {p.theme ? `, ${p.theme}` : ''}
             </div>
             <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
               <Stat k="Result" v={p.result === 'win' ? 'Won' : p.result === 'draw' ? 'Draw' : `Out round ${p.outRound ?? '?'}`} />
               <Stat k="How" v={p.result === 'win' ? 'Last standing' : p.outCause ? causeLabel[p.outCause] : 'Game ended'} />
               {p.bracket != null ? (
-                <Stat k="Bracket" v={BRACKETS.find((b) => b.n === p.bracket)?.name ?? String(p.bracket)} />
+                <div>
+                  <dt className="text-xs text-dim">Bracket</dt>
+                  <dd className="font-semibold">
+                    <BracketTag n={p.bracket} />
+                  </dd>
+                </div>
               ) : (
                 <Stat k="Seat" v={String(p.seat + 1)} />
               )}
-              <Stat k="Final life" v={String(p.finalLife)} />
-              <Stat k="Poison" v={String(p.finalPoison)} />
-              {g.format === 'commander' && <Stat k="Cmdr damage taken" v={String(p.cmdrDamageTaken)} />}
+              {!g.imported && (
+                <>
+                  <Stat k="Final life" v={String(p.finalLife)} />
+                  <Stat k="Poison" v={String(p.finalPoison)} />
+                  {g.format === 'commander' && <Stat k="Cmdr damage taken" v={String(p.cmdrDamageTaken)} />}
+                </>
+              )}
               {g.config.extraCounter && p.finalExtra != null && <Stat k={g.config.extraCounter} v={String(p.finalExtra)} />}
             </dl>
           </div>

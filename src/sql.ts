@@ -92,7 +92,7 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
 
 export const EXAMPLES: { name: string; sql: string }[] = [
   {
-    name: 'Win rate by player',
+    name: 'Who wins the most?',
     sql: `SELECT name, COUNT(*) AS games, SUM(won) AS wins,
   ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
 FROM players
@@ -100,7 +100,7 @@ GROUP BY name
 ORDER BY wins DESC;`,
   },
   {
-    name: 'Best commanders (3+ games)',
+    name: 'Which commanders win most? (3+ games)',
     sql: `SELECT commander, partner, COUNT(*) AS games, SUM(won) AS wins,
   ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
 FROM players
@@ -118,7 +118,7 @@ GROUP BY turn_order
 ORDER BY turn_order;`,
   },
   {
-    name: 'Who deals the most commander damage',
+    name: 'Who deals the most commander damage?',
     sql: `SELECT from_player, SUM(delta) AS commander_damage
 FROM events
 WHERE kind = 'cmdr' AND delta > 0
@@ -126,14 +126,14 @@ GROUP BY from_player
 ORDER BY commander_damage DESC;`,
   },
   {
-    name: 'Most misplays (*)',
+    name: 'Who has the most *?',
     sql: `SELECT name, SUM(misplays) AS total, ROUND(AVG(misplays), 2) AS per_game
 FROM players
 GROUP BY name
 ORDER BY total DESC;`,
   },
   {
-    name: 'Win rate by bracket',
+    name: 'How does each bracket do?',
     sql: `SELECT bracket, COUNT(*) AS games, SUM(won) AS wins,
   ROUND(100.0 * SUM(won) / COUNT(*), 1) AS win_pct
 FROM players
@@ -142,7 +142,7 @@ GROUP BY bracket
 ORDER BY bracket;`,
   },
   {
-    name: 'Games per month',
+    name: 'How many games each month?',
     sql: `SELECT substr(date, 1, 7) AS month, COUNT(*) AS games,
   ROUND(AVG(rounds), 1) AS avg_rounds, ROUND(AVG(minutes)) AS avg_minutes
 FROM games
@@ -150,7 +150,7 @@ GROUP BY month
 ORDER BY month DESC;`,
   },
   {
-    name: 'Round length by round',
+    name: 'How long does each round take?',
     sql: `SELECT round, COUNT(*) AS games, ROUND(AVG(seconds) / 60.0, 1) AS avg_minutes,
   ROUND(MAX(seconds) / 60.0, 1) AS longest_minutes
 FROM rounds
@@ -158,14 +158,14 @@ GROUP BY round
 ORDER BY round;`,
   },
   {
-    name: 'Trophy leaders',
+    name: 'Who has which trophies?',
     sql: `SELECT player, trophy, COUNT(*) AS times
 FROM trophies
 GROUP BY player, trophy
 ORDER BY times DESC;`,
   },
   {
-    name: 'Biggest single life swings',
+    name: 'Biggest single life swings?',
     sql: `SELECT date(at) AS day, player, round, delta
 FROM events
 WHERE kind = 'life'

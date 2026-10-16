@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { MANA, type Mana } from './types';
+import { BRACKETS as BRACKET_LIST, MANA, type Mana } from './types';
 
 export const manaVar: Record<Mana | 'C', string> = {
   W: 'var(--color-mana-w)',
@@ -31,15 +31,21 @@ export function ColorStripe({ colors, className = '' }: { colors: Mana[]; classN
 export function Pips({ colors, size = 12 }: { colors: Mana[]; size?: number }) {
   const cs = sortMana(colors);
   if (!cs.length)
-    return <span className="inline-block rounded-full" style={{ width: size, height: size, background: manaVar.C }} title="Colorless" />;
+    return (
+      <span
+        className="inline-block rounded-full ring-1 ring-black/60"
+        style={{ width: size, height: size, background: manaVar.C, boxShadow: 'inset 0 -1px 1px rgb(0 0 0 / .35)' }}
+        title="Colorless"
+      />
+    );
   return (
     <span className="inline-flex gap-[3px] align-middle">
       {cs.map((m) => (
         <span
           key={m}
           title={manaName[m]}
-          className="inline-block rounded-full ring-1 ring-black/30"
-          style={{ width: size, height: size, background: manaVar[m] }}
+          className="inline-block rounded-full ring-1 ring-black/60"
+          style={{ width: size, height: size, background: manaVar[m], boxShadow: 'inset 0 -1px 1px rgb(0 0 0 / .35)' }}
         />
       ))}
     </span>
@@ -162,3 +168,15 @@ export const causeLabel: Record<string, string> = {
   opponentWon: 'Opponent won',
   other: 'Other',
 };
+
+/** "P Precon", "4 Optimized": the bracket the way the picker shows it */
+export function BracketTag({ n }: { n: number }) {
+  const b = BRACKET_LIST.find((x) => x.n === n);
+  if (!b) return <span>{n}</span>;
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="font-cond text-[1.15em] font-bold">{b.label}</span>
+      <span className="text-[0.8em] text-dim">{b.name}</span>
+    </span>
+  );
+}

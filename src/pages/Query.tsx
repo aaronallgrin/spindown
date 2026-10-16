@@ -55,84 +55,116 @@ export default function Query() {
     }
   };
 
+  const [asked, setAsked] = useState<string | null>(null);
+  const [own, setOwn] = useState(false);
+
+  const results = (
+    <>
+      {err && <p className="mt-3 rounded-lg bg-blood/15 p-3 text-sm text-bone">{err}</p>}
+      {res && res.length === 0 && !err && <p className="mt-3 text-dim">No games answer that yet.</p>}
+      {res?.map((r, i) => (
+        <div key={i} className="mt-3 max-h-[60vh] overflow-auto rounded-lg bg-felt">
+          <table className="w-full text-left text-sm tabular-nums">
+            <thead className="sticky top-0 bg-felt-3">
+              <tr>
+                {r.columns.map((c) => (
+                  <th key={c} className="whitespace-nowrap px-3 py-2 font-semibold">
+                    {pretty(c)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {r.values.map((row, j) => (
+                <tr key={j} className="border-t border-line/60">
+                  {row.map((v, k) => (
+                    <td key={k} className={`whitespace-nowrap px-3 py-2 ${typeof v === 'number' ? 'text-right' : ''}`}>
+                      {v == null ? <span className="text-dim">–</span> : String(v)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </>
+  );
+
   return (
     <Page title="Query">
-      <p className="mb-3 text-sm text-dim">
-        Ask your game history anything with SQL. {games ? `${games.length} saved games loaded.` : ''}
+      <p className="mb-4 text-sm text-dim">
+        Tap a question to answer it from your games. {games ? `${games.length} saved games.` : ''}
       </p>
 
-      <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+      <div className="flex flex-col gap-2">
         {EXAMPLES.map((x) => (
-          <button
-            key={x.name}
-            onClick={() => {
-              setSql(x.sql);
-              run(x.sql);
-            }}
-            className="shrink-0 rounded-full bg-felt-2 px-3 py-1.5 text-sm hover:bg-felt-3"
-          >
-            {x.name}
-          </button>
+          <div key={x.name} className={`rounded-xl bg-felt-2 ${asked === x.name ? 'p-3 ring-1 ring-brass/60' : ''}`}>
+            <button
+              disabled={!ready}
+              onClick={() => {
+                if (asked === x.name) return setAsked(null);
+                setAsked(x.name);
+                setOwn(false);
+                setSql(x.sql);
+                run(x.sql);
+              }}
+              className={`w-full text-left font-semibold ${asked === x.name ? 'text-brass' : 'px-4 py-3 hover:text-brass'}`}
+            >
+              {x.name}
+            </button>
+            {asked === x.name && results}
+          </div>
         ))}
       </div>
 
-      <textarea
-        id="sql"
-        value={sql}
-        onChange={(e) => setSql(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) run();
-        }}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        rows={7}
-        className="w-full rounded-lg bg-felt-2 p-3 font-mono text-[13px] leading-relaxed"
-      />
-      <div className="mt-2 flex gap-2">
-        <Btn variant="primary" onClick={() => run()} disabled={!ready} className="flex-1">
-          {ready ? 'Run query' : 'Loading'}
-        </Btn>
-        <Btn onClick={() => setShowSchema((x) => !x)}>{showSchema ? 'Hide tables' : 'Tables'}</Btn>
-      </div>
-
-      {showSchema && (
-        <pre className="mt-3 overflow-x-auto rounded-lg bg-felt-2 p-3 text-xs leading-relaxed text-dim">{SCHEMA}</pre>
-      )}
-
-      {err && <p className="mt-4 rounded-lg bg-blood/15 p-3 text-sm text-bone">{err}</p>}
-
-      {res && res.length === 0 && !err && <p className="mt-4 text-dim">The query ran and returned no rows.</p>}
-
-      {res?.map((r, i) => (
-        <div key={i} className="mt-4">
-          <div className="mb-1 text-xs text-dim">{r.values.length} rows</div>
-          <div className="max-h-[60vh] overflow-auto rounded-lg bg-felt-2">
-            <table className="w-full text-left text-sm tabular-nums">
-              <thead className="sticky top-0 bg-felt-3">
-                <tr>
-                  {r.columns.map((c) => (
-                    <th key={c} className="whitespace-nowrap px-3 py-2 font-semibold">
-                      {c}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {r.values.map((row, j) => (
-                  <tr key={j} className="border-t border-line/60">
-                    {row.map((v, k) => (
-                      <td key={k} className={`whitespace-nowrap px-3 py-2 ${typeof v === 'number' ? 'text-right' : ''}`}>
-                        {v == null ? <span className="text-dim">–</span> : String(v)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="mt-10">
+        {!own ? (
+          <button
+            onClick={() => {
+              setOwn(true);
+              setAsked(null);
+              setRes(null);
+              setErr('');
+            }}
+            className="text-sm text-dim hover:text-bone"
+          >
+            Write your own question (advanced)
+          </button>
+        ) : (
+          <div>
+            <textarea
+              id="sql"
+              value={sql}
+              onChange={(e) => setSql(e.target.value)}
+              spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              rows={6}
+              className="w-full rounded-lg bg-felt-2 p-3 font-mono text-[13px] leading-relaxed"
+            />
+            <div className="mt-2 flex gap-2">
+              <Btn variant="primary" onClick={() => run()} disabled={!ready} className="flex-1">
+                Run
+              </Btn>
+              <Btn onClick={() => setShowSchema((x) => !x)}>{showSchema ? 'Hide tables' : 'Tables'}</Btn>
+              <Btn onClick={() => setOwn(false)}>Close</Btn>
+            </div>
+            {showSchema && (
+              <pre className="mt-3 overflow-x-auto rounded-lg bg-felt-2 p-3 text-xs leading-relaxed text-dim">{SCHEMA}</pre>
+            )}
+            {results}
           </div>
-        </div>
-      ))}
+        )}
+      </div>
     </Page>
   );
+}
+
+/** win_pct -> Win %, commander_damage -> Commander damage */
+function pretty(c: string) {
+  const m: Record<string, string> = { win_pct: 'Win %', per_game: 'Per game', avg_minutes: 'Avg min', longest_minutes: 'Longest min' };
+  if (m[c]) return m[c];
+  const t = c.replace(/_/g, ' ');
+  return t[0].toUpperCase() + t.slice(1);
 }

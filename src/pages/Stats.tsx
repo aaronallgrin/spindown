@@ -19,7 +19,8 @@ import {
   type Filters,
   type Row,
 } from '../stats';
-import { Page, Pips, fmtDate } from '../ui';
+import { BracketTag, Page, Pips, fmtDate } from '../ui';
+import { CardNames } from '../components/CardName';
 import { TrophyIcon } from '../components/Trophies';
 import type { GameRecord } from '../types';
 import { TROPHY_INFO, eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
@@ -124,7 +125,14 @@ export default function Stats() {
             {byDeck(forPlayer)
               .slice(0, 15)
               .map((r) => (
-                <RateRow key={r.key} row={r} fair={fair} sub={r.extra!.pilots as string} pips />
+                <RateRow
+                  key={r.key}
+                  row={r}
+                  fair={fair}
+                  sub={r.extra!.pilots as string}
+                  pips
+                  label={isCmdr ? <CardNames text={r.label} /> : undefined}
+                />
               ))}
           </Section>
 
@@ -147,7 +155,7 @@ export default function Stats() {
           {byBracket(forPlayer).length > 0 && (
             <Section title="Brackets">
               {byBracket(forPlayer).map((r) => (
-                <RateRow key={r.key} row={r} fair={fair} />
+                <RateRow key={r.key} row={r} fair={fair} label={<BracketTag n={Number(r.key)} />} />
               ))}
             </Section>
           )}
@@ -175,7 +183,7 @@ export default function Stats() {
                   <span className="block truncate font-semibold">{w.name}</span>
                   <span className="flex items-center gap-1.5 truncate text-sm text-dim">
                     <Pips colors={w.colors} size={8} />
-                    {w.commander ?? w.deckName ?? ''}
+                    {w.commander ? <CardNames text={[w.commander, w.partner].filter(Boolean).join(' + ')} /> : (w.deckName ?? '')}
                   </span>
                 </span>
                 <span className="shrink-0 text-sm text-dim">{fmtDate(g.startedAt)}</span>
@@ -246,7 +254,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 }
 
 /** one ranked row: label, then a win-rate bar with the fair-share mark */
-function RateRow({ row, fair, sub, label, pips }: { row: Row; fair: number; sub?: string; label?: string; pips?: boolean }) {
+function RateRow({ row, fair, sub, label, pips }: { row: Row; fair: number; sub?: string; label?: ReactNode; pips?: boolean }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg px-2 py-2">
       <div className="min-w-0">
