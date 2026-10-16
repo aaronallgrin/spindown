@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useStore } from '../store';
-import { defaultLayout, getLayout, layoutsFor, seatPosition, type Layout } from '../layouts';
-import { BRACKETS, type Format, type GameConfig, type Mana, type Orientation, type PlayerSetup } from '../types';
+import { LAYOUTS, defaultLayout, layoutsFor, type Layout } from '../layouts';
+import { BRACKETS, type Format, type GameConfig, type Mana, type PlayerSetup } from '../types';
 import CommanderPicker from '../components/CommanderPicker';
 import ConfirmBtn from '../components/ConfirmBtn';
 import { Btn, ManaPicker, Page, Pips, Segmented, sortMana } from '../ui';
@@ -31,7 +31,6 @@ export default function Setup() {
   const { lastConfig, start, game, discard } = useStore();
   const nav = useNavigate();
   const [cfg, setCfg] = useState<GameConfig>(() => defaults());
-  const layout = getLayout(cfg.layoutId);
   const games = useLiveQuery(() => db.games.orderBy('startedAt').reverse().toArray(), []);
 
   // names seen before, and each name's past decks for one-tap reuse
@@ -64,22 +63,12 @@ export default function Setup() {
       const players = Array.from({ length: n }, (_, i) => c.players[i] ?? blank());
       return { ...c, players, layoutId: defaultLayout(n, c.orientation).id };
     });
-  const setOrientation = (o: Orientation) =>
-    set({ orientation: o, layoutId: defaultLayout(cfg.players.length, o).id });
   const setFormat = (f: Format) => set({ format: f, startingLife: lifeFor(f) });
-
-  const swap = (i: number) =>
-    setCfg((c) => {
-      const j = (i + 1) % c.players.length;
-      const players = [...c.players];
-      [players[i], players[j]] = [players[j], players[i]];
-      return { ...c, players };
-    });
 
   const begin = () => {
     if (game) discard();
     const cleaned: GameConfig = {
-      ...cfg,
+      ...normalize(cfg),
       players: cfg.players.map((p, i) => ({
         ...p,
         name: p.name.trim() || `Seat ${i + 1}`,
@@ -106,7 +95,7 @@ export default function Setup() {
       </datalist>
 
       {lastConfig && (
-        <Btn className="mb-5 w-full" onClick={() => setCfg({ ...lastConfig, extraCounter: lastConfig.extraCounter ?? '*' })}>
+        <Btn className="mb-5 w-full" onClick={() => setCfg(normalize(lastConfig))}>
           Same table as last game
         </Btn>
       )}
@@ -133,45 +122,14 @@ export default function Setup() {
             onChange={(v) => set({ startingLife: v })}
           />
         </div>
-        <Segmented
-          label="Phone orientation"
-          value={cfg.orientation}
-          onChange={setOrientation}
-          options={[
-            { v: 'portrait', label: 'Portrait' },
-            { v: 'landscape', label: 'Landscape' },
-          ]}
-        />
         <div>
           <div className="mb-2 text-sm text-dim">Seating, numbered clockwise</div>
           <div className="flex flex-wrap gap-3">
-            {layoutsFor(cfg.players.length, cfg.orientation).map((l) => (
+            {layoutsFor(cfg.players.length, 'portrait').map((l) => (
               <LayoutThumb key={l.id} layout={l} selected={l.id === cfg.layoutId} onClick={() => set({ layoutId: l.id })} />
             ))}
           </div>
         </div>
-        {isCmdr && (
-          <label className="flex items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={cfg.cmdrDamageLosesLife}
-              onChange={(e) => set({ cmdrDamageLosesLife: e.target.checked })}
-              className="h-5 w-5 accent-[var(--color-brass)]"
-            />
-            Commander damage also takes life
-          </label>
-        )}
-        <label className="flex items-center gap-3 text-sm">
-          <span className="shrink-0">Misplay counter</span>
-          <input
-            id="extra-counter"
-            value={cfg.extraCounter ?? ''}
-            onChange={(e) => set({ extraCounter: e.target.value })}
-            placeholder="Leave blank to hide it"
-            maxLength={12}
-            className="min-w-0 flex-1 rounded-lg bg-felt-3 px-3 py-2 placeholder:text-dim/70"
-          />
-        </label>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -181,26 +139,17 @@ export default function Setup() {
             .slice(0, 6);
           return (
             <div key={i} className="rounded-xl bg-felt-2 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-brass font-cond font-bold text-felt">{i + 1}</span>
-                <span className="text-sm text-dim">{seatPosition(layout, i)}</span>
-                <button
-                  type="button"
-                  onClick={() => swap(i)}
-                  className="ml-auto rounded px-2 py-1 text-sm text-dim hover:bg-felt-3 hover:text-bone"
-                >
-                  Swap with seat {((i + 1) % cfg.players.length) + 1}
-                </button>
-              </div>
-
-              <input
+              <div className="mb-3 flex items-center gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brass font-cond text-lg font-bold text-felt">{i + 1}</span>
+                <input
                 list="names"
                 value={p.name}
                 onChange={(e) => setPlayer(i, { name: e.target.value })}
                 placeholder="Player name"
-                className="mb-3 w-full rounded-lg bg-felt-3 px-3 py-2.5 text-lg font-semibold placeholder:font-normal placeholder:text-dim/70"
+                className="min-w-0 flex-1 rounded-lg bg-felt-3 px-3 py-2.5 text-lg font-semibold placeholder:font-normal placeholder:text-dim/70"
                 autoComplete="off"
               />
+              </div>
 
               {past.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -253,20 +202,17 @@ export default function Setup() {
                       }
                     />
                   )}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <ManaPicker value={p.colors} onChange={(colors) => setPlayer(i, { colors })} />
-                  </div>
                   <div>
                     <div className="mb-1.5 text-sm text-dim">Bracket</div>
                     <Segmented
                       label="Bracket"
-                      value={p.bracket ?? 0}
-                      onChange={(b) => setPlayer(i, { bracket: b ? (b as PlayerSetup['bracket']) : undefined })}
+                      value={p.bracket ?? -1}
+                      onChange={(b) => setPlayer(i, { bracket: b as PlayerSetup['bracket'] })}
                       options={BRACKETS.map((b) => ({
-                        v: b.n,
+                        v: b.n as number,
                         label: (
                           <span className="flex flex-col leading-tight">
-                            <span className="font-cond text-lg font-bold">{b.n}</span>
+                            <span className="font-cond text-lg font-bold">{b.label}</span>
                             <span className="text-[10px]">{b.name}</span>
                           </span>
                         ),
@@ -310,6 +256,19 @@ export default function Setup() {
       </div>
     </Page>
   );
+}
+
+/** Fixed house rules: portrait table, commander damage takes life, the * misplay counter. */
+function normalize(c: GameConfig): GameConfig {
+  const n = c.players.length;
+  const layoutOk = LAYOUTS.some((l) => l.id === c.layoutId && l.orientation === 'portrait' && l.players === n);
+  return {
+    ...c,
+    orientation: 'portrait',
+    layoutId: layoutOk ? c.layoutId : defaultLayout(n, 'portrait').id,
+    cmdrDamageLosesLife: true,
+    extraCounter: '*',
+  };
 }
 
 function unionColors(a?: Mana[], b?: Mana[]): Mana[] {

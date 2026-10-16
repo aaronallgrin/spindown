@@ -32,12 +32,6 @@ export const LAYOUTS: Layout[] = [
   L('p4-ends', 'One per side', 'portrait', ['a a', 'd b', 'c c'], [180, 270, 0, 90]),
   L('p5', 'Two, two, one end', 'portrait', ['a b', 'e c', 'd d'], [90, 270, 270, 0, 90]),
   L('p6', 'Three each side', 'portrait', ['a b', 'f c', 'e d'], [90, 270, 270, 270, 90, 90]),
-
-  L('l2', 'Across the table', 'landscape', ['a', 'b'], [180, 0]),
-  L('l3', 'Two across, one', 'landscape', ['a b', 'c c'], [180, 180, 0]),
-  L('l4', 'Two and two', 'landscape', ['a b', 'd c'], [180, 180, 0, 0]),
-  L('l5', 'Three and two', 'landscape', ['a a b b c c', 'e e e d d d'], [180, 180, 180, 0, 0]),
-  L('l6', 'Three and three', 'landscape', ['a b c', 'f e d'], [180, 180, 180, 0, 0, 0]),
 ];
 
 export const layoutsFor = (players: number, orientation: Orientation) =>

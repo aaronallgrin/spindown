@@ -2,14 +2,16 @@ export type Format = 'commander' | 'constructed' | 'other';
 export type Mana = 'W' | 'U' | 'B' | 'R' | 'G';
 export const MANA: Mana[] = ['W', 'U', 'B', 'R', 'G'];
 export type Orientation = 'portrait' | 'landscape';
-export type Bracket = 1 | 2 | 3 | 4 | 5;
+/** 0 = precon */
+export type Bracket = 0 | 1 | 2 | 3 | 4 | 5;
 
-export const BRACKETS: { n: Bracket; name: string }[] = [
-  { n: 1, name: 'Exhibition' },
-  { n: 2, name: 'Core' },
-  { n: 3, name: 'Upgraded' },
-  { n: 4, name: 'Optimized' },
-  { n: 5, name: 'cEDH' },
+export const BRACKETS: { n: Bracket; label: string; name: string }[] = [
+  { n: 0, label: 'P', name: 'Precon' },
+  { n: 1, label: '1', name: 'Exhibition' },
+  { n: 2, label: '2', name: 'Core' },
+  { n: 3, label: '3', name: 'Upgraded' },
+  { n: 4, label: '4', name: 'Optimized' },
+  { n: 5, label: '5', name: 'cEDH' },
 ];
 
 export interface CardRef {

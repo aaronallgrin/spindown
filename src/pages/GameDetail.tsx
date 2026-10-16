@@ -46,7 +46,11 @@ export default function GameDetail() {
             <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
               <Stat k="Result" v={p.result === 'win' ? 'Won' : p.result === 'draw' ? 'Draw' : `Out round ${p.outRound ?? '?'}`} />
               <Stat k="How" v={p.result === 'win' ? 'Last standing' : p.outCause ? causeLabel[p.outCause] : 'Game ended'} />
-              {p.bracket ? <Stat k="Bracket" v={`${p.bracket} ${BRACKETS[p.bracket - 1].name}`} /> : <Stat k="Seat" v={String(p.seat + 1)} />}
+              {p.bracket != null ? (
+                <Stat k="Bracket" v={BRACKETS.find((b) => b.n === p.bracket)?.name ?? String(p.bracket)} />
+              ) : (
+                <Stat k="Seat" v={String(p.seat + 1)} />
+              )}
               <Stat k="Final life" v={String(p.finalLife)} />
               <Stat k="Poison" v={String(p.finalPoison)} />
               {g.format === 'commander' && <Stat k="Cmdr damage taken" v={String(p.cmdrDamageTaken)} />}
