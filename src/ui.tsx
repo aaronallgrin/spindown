@@ -158,5 +158,7 @@ export const causeLabel: Record<string, string> = {
   commander: 'Commander damage',
   poison: 'Poison',
   concede: 'Conceded',
+  lose: 'Lost',
+  opponentWon: 'Opponent won',
   other: 'Other',
 };

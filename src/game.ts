@@ -71,6 +71,9 @@ export type Action =
   | { t: 'extra'; seat: number; d: number }
   | { t: 'round'; d: 1 | -1 }
   | { t: 'out'; seat: number; cause: OutCause }
+  | { t: 'win'; seat: number }
+  | { t: 'revive'; seat: number }
+  | { t: 'takeBackWin' }
   | { t: 'dismiss'; seat: number }
   | { t: 'end'; winner: number | null };
 
@@ -140,6 +143,12 @@ function finishIfOver(g: LiveGame): LiveGame {
     };
   }
   return g;
+}
+
+/** a finished game goes back to being played */
+function reopen(g: LiveGame): LiveGame {
+  if (g.phase !== 'over') return g;
+  return { ...g, phase: 'playing', endedAt: undefined, winnerSeat: null, draw: false };
 }
 
 export function reduce(g: LiveGame, a: Action): LiveGame {
@@ -236,6 +245,37 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'out' as const, cause: a.cause }],
       };
       return finishIfOver(withLog);
+    }
+    case 'win': {
+      // this player wins outright; everyone still in is out
+      if (g.phase !== 'playing' || g.players[a.seat].out) return g;
+      const at = Date.now();
+      return {
+        ...g,
+        players: g.players.map((p) =>
+          p.out || p.seat === a.seat ? p : { ...p, out: { round: g.round, turn: g.turn, cause: 'opponentWon', at } },
+        ),
+        phase: 'over',
+        endedAt: at,
+        winnerSeat: a.seat,
+        draw: false,
+        events: [...g.events, { at, round: g.round, turn: g.turn, seat: a.seat, kind: 'win' }],
+      };
+    }
+    case 'takeBackWin': {
+      if (g.phase !== 'over') return g;
+      return reopen({
+        ...g,
+        players: g.players.map((p) => (p.out?.cause === 'opponentWon' ? { ...p, out: undefined, lethalDismissed: true } : p)),
+        events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: g.winnerSeat ?? -1, kind: 'revive' }],
+      });
+    }
+    case 'revive': {
+      if (!g.players[a.seat].out) return g;
+      return reopen({
+        ...patch(g, a.seat, (p) => ({ ...p, out: undefined, lethalDismissed: true })),
+        events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'revive' }],
+      });
     }
     case 'dismiss':
       return patch(g, a.seat, (p) => ({ ...p, lethalDismissed: true }));

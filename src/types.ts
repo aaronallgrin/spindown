@@ -69,7 +69,8 @@ export interface GameConfig {
   extraCounter?: string;
 }
 
-export type OutCause = 'life' | 'commander' | 'poison' | 'concede' | 'other';
+/** opponentWon = knocked out because another player declared a win */
+export type OutCause = 'life' | 'commander' | 'poison' | 'concede' | 'lose' | 'opponentWon' | 'other';
 
 export interface LivePlayer {
   seat: number;
@@ -84,7 +85,7 @@ export interface LivePlayer {
   lethalDismissed?: boolean;
 }
 
-export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'first';
+export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'win' | 'revive' | 'first';
 
 export interface GameEvent {
   at: number;

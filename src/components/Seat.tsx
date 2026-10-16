@@ -212,6 +212,15 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               <div className="text-bone/60" style={{ fontSize: 'clamp(11px, 5.5cqh, 16px)' }}>
                 {causeLabel[p.out.cause]}
               </div>
+              {p.out.cause !== 'opponentWon' && (
+                <button
+                  className="mt-[3cqh] rounded-full border border-bone/30 px-4 py-1.5 text-bone/80"
+                  style={{ fontSize: 'clamp(11px, 5.5cqh, 16px)' }}
+                  onClick={() => dispatch({ t: 'revive', seat })}
+                >
+                  Take back
+                </button>
+              )}
             </div>
           )}
 
@@ -320,21 +329,56 @@ function CounterPanel({
       </div>
       <div className="mt-[2cqh] flex gap-2">
         {!p.out && game.phase === 'playing' && (
-          <button
-            className="rounded-lg bg-felt-3 px-3 py-[1.6cqh] text-bone/80"
-            onClick={() => {
-              dispatch({ t: 'out', seat, cause: 'concede' });
-              close();
-            }}
-          >
-            Concede
-          </button>
+          <>
+            <TwoTap
+              label="Win"
+              className="bg-brass/20 text-brass"
+              onConfirm={() => {
+                dispatch({ t: 'win', seat });
+                close();
+              }}
+            />
+            <TwoTap
+              label="Lose"
+              className="bg-felt-3 text-bone/80"
+              onConfirm={() => {
+                dispatch({ t: 'out', seat, cause: 'lose' });
+                close();
+              }}
+            />
+            <TwoTap
+              label="Concede"
+              className="bg-felt-3 text-bone/80"
+              onConfirm={() => {
+                dispatch({ t: 'out', seat, cause: 'concede' });
+                close();
+              }}
+            />
+          </>
         )}
         <button className="flex-1 rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
           Done
         </button>
       </div>
     </div>
+  );
+}
+
+/** Needs a second tap within a few seconds, so a stray tap can't end someone's game. */
+function TwoTap({ label, className, onConfirm }: { label: string; className: string; onConfirm: () => void }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 3500);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`rounded-lg px-3 py-[1.6cqh] font-semibold ${armed ? 'bg-blood text-bone' : className}`}
+      onClick={() => (armed ? onConfirm() : setArmed(true))}
+    >
+      {armed ? `${label}?` : label}
+    </button>
   );
 }
 

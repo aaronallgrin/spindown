@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { alive, seated } from '../game';
+import { alive, seated, type Action } from '../game';
+import type { LiveGame } from '../types';
 import SeatEditor from '../components/SeatEditor';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
@@ -136,7 +137,7 @@ export default function Play() {
           <div className="absolute inset-0 z-30 grid place-items-center bg-black/55 p-4">
             <div className="w-full max-w-sm rounded-2xl bg-felt-2 p-5 shadow-2xl">
               <div className="mb-1 text-sm text-dim">
-                {game.round} rounds, {Math.max(1, Math.round(((game.endedAt ?? Date.now()) - game.startedAt) / 60000))} min
+                {game.round} {game.round === 1 ? "round" : "rounds"}, {Math.max(1, Math.round(((game.endedAt ?? Date.now()) - game.startedAt) / 60000))} min
               </div>
               <div className="mb-4 font-cond text-4xl font-bold">
                 {game.winnerSeat != null ? `${game.config.players[game.winnerSeat].name} wins` : 'Draw'}
@@ -152,9 +153,7 @@ export default function Play() {
                   Save game
                 </Btn>
                 <Btn onClick={() => finish(true)}>Save and rematch</Btn>
-                <Btn onClick={undo} disabled={!canUndo}>
-                  Undo last change
-                </Btn>
+                <TakeBack game={game} dispatch={dispatch} />
               </div>
             </div>
           </div>
@@ -278,4 +277,22 @@ function centerPads(layout: Layout, w: number, h: number, d20: number) {
     const px = Math.round(r + 6);
     return { side: rel < -0.33 ? 'left' : rel > 0.33 ? 'right' : 'both', px } as const;
   });
+}
+
+/** Undo the knockout or win that ended the game and go back to playing. */
+function TakeBack({ game, dispatch }: { game: LiveGame; dispatch: (a: Action) => void }) {
+  const declared = game.players.some((p) => p.out?.cause === 'opponentWon');
+  const last = [...game.players].filter((p) => p.out).sort((a, b) => b.out!.at - a.out!.at)[0];
+  if (declared && game.winnerSeat != null) {
+    return <Btn onClick={() => dispatch({ t: 'takeBackWin' })}>Take back {game.config.players[game.winnerSeat].name}'s win</Btn>;
+  }
+  if (last && game.endedAt && last.out!.at >= game.endedAt - 1000) {
+    const name = game.config.players[last.seat].name;
+    return (
+      <Btn onClick={() => dispatch({ t: 'revive', seat: last.seat })}>
+        Take back {name}'s knockout
+      </Btn>
+    );
+  }
+  return <Btn onClick={() => dispatch({ t: 'takeBackWin' })}>Keep playing</Btn>;
 }

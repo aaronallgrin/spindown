@@ -27,7 +27,7 @@ export default function GameDetail() {
   return (
     <Page title={g.winnerName ? `${g.winnerName} won` : 'Draw'} back="/history">
       <p className="mb-5 text-dim">
-        {fmtDate(g.startedAt)}, {g.rounds} rounds, {g.durationMin} min, starting at {g.startingLife} life
+        {fmtDate(g.startedAt)}, {g.rounds} {g.rounds === 1 ? "round" : "rounds"}, {g.durationMin} min
       </p>
 
       <div className="flex flex-col gap-2">
