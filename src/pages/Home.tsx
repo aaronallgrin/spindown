@@ -195,7 +195,7 @@ export default function Home() {
         })}
       </div>
 
-      <p className="mt-auto pt-10 text-center text-xs text-dim">Version {__BUILD_DATE__}</p>
+      <p className="mt-auto pt-10 text-center text-xs text-dim">Version: {__BUILD_DATE__}</p>
     </div>
   );
 }
