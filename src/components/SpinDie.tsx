@@ -73,7 +73,7 @@ export default function SpinDie({
           <D20 value="" size={size} />
         </div>
         <span
-          className="pointer-events-none absolute inset-0 grid place-items-center font-cond font-bold text-brass-2"
+          className="pointer-events-none absolute inset-0 grid place-items-center font-cond font-bold text-brass"
           style={{ fontSize: size * 0.3, paddingTop: size * 0.04 }}
         >
           {value}

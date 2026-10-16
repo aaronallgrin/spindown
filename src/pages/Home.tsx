@@ -15,7 +15,10 @@ export default function Home() {
       <div className="mb-10 flex items-center gap-4">
         <D20 value="20" size={64} />
         <div>
-          <h1 className="font-cond text-5xl font-bold leading-none tracking-wide">Spindown</h1>
+          <h1 className="flex items-center font-cond text-5xl font-bold leading-none tracking-wide">
+            <span className="text-bone">Spin</span>
+            <span className="ml-1 rounded-md bg-brass px-1.5 pb-0.5 text-felt">down</span>
+          </h1>
           <p className="mt-1 text-dim">Life, turns and the record of every game.</p>
         </div>
       </div>

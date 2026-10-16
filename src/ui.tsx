@@ -74,7 +74,7 @@ export function ManaPicker({ value, onChange }: { value: Mana[]; onChange: (v: M
 export function D20({ value, size = 84, label }: { value: ReactNode; size?: number; label?: string }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} className="d20" aria-label={label}>
-      <polygon points="50,2 91.6,26 91.6,74 50,98 8.4,74 8.4,26" fill="#2a2416" stroke="var(--color-brass)" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="50,2 91.6,26 91.6,74 50,98 8.4,74 8.4,26" fill="#1b1b1b" stroke="var(--color-brass)" strokeWidth="3" strokeLinejoin="round" />
       <g stroke="var(--color-brass)" strokeWidth="1.6" opacity="0.75" fill="none">
         <polygon points="50,24 75,67 25,67" />
         <path d="M50,2 L50,24 M50,24 L91.6,26 M50,24 L8.4,26 M75,67 L91.6,26 M75,67 L91.6,74 M75,67 L50,98 M25,67 L8.4,26 M25,67 L8.4,74 M25,67 L50,98" />
@@ -84,7 +84,7 @@ export function D20({ value, size = 84, label }: { value: ReactNode; size?: numb
         y="55"
         textAnchor="middle"
         dominantBaseline="middle"
-        fill="var(--color-brass-2)"
+        fill="var(--color-brass)"
         style={{ font: '700 26px var(--font-cond)' }}
       >
         {value}

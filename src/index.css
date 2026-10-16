@@ -1,14 +1,15 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-felt: #17201b;
-  --color-felt-2: #212c26;
-  --color-felt-3: #2b3832;
-  --color-line: #3a4a42;
-  --color-bone: #ece5d3;
-  --color-dim: #9aa79f;
-  --color-brass: #c9a24a;
-  --color-brass-2: #e7c877;
+  /* palette: #1B1B1B background, #292929 containers, #808080 secondary, #FFFFFF titles, #FFA31A accent */
+  --color-felt: #1b1b1b;
+  --color-felt-2: #292929;
+  --color-felt-3: #333333;
+  --color-line: #444444;
+  --color-bone: #ffffff;
+  --color-dim: #808080;
+  --color-brass: #ffa31a;
+  --color-brass-2: #ff9902;
   --color-blood: #d2492f;
   --color-mana-w: #efe3bc;
   --color-mana-u: #3f7cc0;
@@ -53,7 +54,7 @@ button {
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  background: #0d120f;
+  background: #121212;
 }
 
 .table {
@@ -129,8 +130,8 @@ button {
 
 .active-ring {
   box-shadow:
-    inset 0 0 0 3px var(--color-brass-2),
-    inset 0 0 32px rgb(231 200 119 / 0.35);
+    inset 0 0 0 3px var(--color-brass),
+    inset 0 0 32px rgb(255 163 26 / 0.35);
 }
 
 .d20 {
