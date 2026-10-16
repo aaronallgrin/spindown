@@ -126,15 +126,36 @@ export function byTurnOrder(games: GameRecord[]): Row[] {
 }
 
 export function byColor(games: GameRecord[]): Row[] {
-  const name: Record<Mana, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+  const name: Record<Mana, string> = { W: 'Plays white', U: 'Plays blue', B: 'Plays black', R: 'Plays red', G: 'Plays green' };
   const m = tally(
     games,
     (p) => (p.colors.length ? p.colors : ['C']),
-    (k) => name[k as Mana] ?? 'Colorless',
+    (k) => name[k as Mana] ?? 'Colorless decks',
   );
   for (const r of m.values()) r.colors = r.key === 'C' ? [] : [r.key as Mana];
   const order = [...MANA, 'C'];
   return [...finish(m)].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+}
+
+/** names for every color identity, keyed in WUBRG order */
+export const IDENTITY_NAMES: Record<string, string> = {
+  '': 'Colorless',
+  W: 'Mono-White', U: 'Mono-Blue', B: 'Mono-Black', R: 'Mono-Red', G: 'Mono-Green',
+  WU: 'Azorius', UB: 'Dimir', BR: 'Rakdos', RG: 'Gruul', WG: 'Selesnya',
+  WB: 'Orzhov', UR: 'Izzet', BG: 'Golgari', WR: 'Boros', UG: 'Simic',
+  WUB: 'Esper', UBR: 'Grixis', BRG: 'Jund', WRG: 'Naya', WUG: 'Bant',
+  WBG: 'Abzan', WUR: 'Jeskai', UBG: 'Sultai', WBR: 'Mardu', URG: 'Temur',
+  WUBR: 'Yore-Tiller', UBRG: 'Glint-Eye', WBRG: 'Dune-Brood', WURG: 'Ink-Treader', WUBG: 'Witch-Maw',
+  WUBRG: 'Five-Color',
+};
+
+export const identityKey = (colors: Mana[]) => MANA.filter((m) => colors.includes(m)).join('');
+
+/** win rate by exact color identity: Boros, Dimir, Esper and so on */
+export function byIdentity(games: GameRecord[]): Row[] {
+  const m = tally(games, (p) => identityKey(p.colors), (k) => IDENTITY_NAMES[k] ?? k);
+  for (const r of m.values()) r.colors = r.key.split('') as Mana[];
+  return [...finish(m)].sort((a, b) => b.games - a.games || b.rate - a.rate);
 }
 
 export function byColorCount(games: GameRecord[]): Row[] {

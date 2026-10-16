@@ -7,6 +7,7 @@ import {
   byBracket,
   byColor,
   byColorCount,
+  byIdentity,
   byDeck,
   byPlayer,
   bySubFormat,
@@ -145,13 +146,21 @@ export default function Stats() {
             ))}
           </Section>
 
-          <Section title="Colors" note="A deck counts toward every color in its identity.">
-            {byColor(forPlayer).map((r) => (
+          <Section title="Color identities">
+            {byIdentity(forPlayer).map((r) => (
               <RateRow key={r.key} row={r} fair={fair} pips />
             ))}
-            <div className="my-1 border-t border-line" />
+          </Section>
+
+          <Section title="Number of colors">
             {byColorCount(forPlayer).map((r) => (
               <RateRow key={r.key} row={r} fair={fair} />
+            ))}
+          </Section>
+
+          <Section title="By color" note="Every deck that includes the color, alone or with others.">
+            {byColor(forPlayer).map((r) => (
+              <RateRow key={r.key} row={r} fair={fair} pips />
             ))}
           </Section>
 
