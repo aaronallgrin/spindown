@@ -3,7 +3,7 @@ import { CMDR_LETHAL, POISON_LETHAL, lethalCause, type Action } from '../game';
 import type { Rot } from '../layouts';
 import type { LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
-import { Crown, Poison, Skull, Sword } from './icons';
+import { Crown, Skull } from './icons';
 import { usePress } from './usePress';
 
 interface Props {
@@ -20,12 +20,12 @@ export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Pro
   const setup = game.config.players[seat];
   const [panel, setPanel] = useState(false);
   const delta = useDelta(p.life);
-  const isActive = game.phase === 'playing' && game.activeSeat === seat && !p.out;
   const isCmdr = game.config.format === 'commander';
   const lethal = game.phase === 'playing' ? lethalCause(game, p) : null;
   const cmdrMax = Math.max(0, ...Object.values(p.cmdr));
   const art = setup.commander?.artCrop;
   const colors = sortMana(setup.colors);
+  const extraName = game.config.extraCounter?.trim();
 
   const minus = usePress(
     () => dispatch({ t: 'life', seat, d: -1 }),
@@ -43,7 +43,7 @@ export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Pro
         .join(', ')})`;
 
   return (
-    <div className={`seat ${isActive ? 'active-ring' : ''}`} style={{ gridArea: area }}>
+    <div className="seat" style={{ gridArea: area }}>
       <div className={`face r${rot}`}>
         <div className="face-inner overflow-hidden" style={{ background: bg ?? '#111' }}>
           {art && <div className="art" style={{ backgroundImage: `url(${art})` }} />}
@@ -74,11 +74,6 @@ export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Pro
                 {setup.hasPartner && setup.partner ? ` + ${setup.partner.name}` : ''}
               </div>
             </div>
-            {isActive && (
-              <span className="rounded-full bg-brass-2 px-2 py-0.5 font-cond font-bold text-felt" style={{ fontSize: 'clamp(10px, 5cqh, 15px)' }}>
-                Turn
-              </span>
-            )}
           </div>
 
           {/* life with tap halves */}
@@ -113,17 +108,12 @@ export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Pro
           <div className="absolute inset-x-0 bottom-[5px] flex items-center gap-[2cqw] px-[3cqw] pb-[2.5cqh]" style={{ fontSize: 'clamp(12px, 6.4cqh, 20px)' }}>
             <button
               onClick={() => setPanel(true)}
-              className="flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 backdrop-blur-sm"
-              aria-label="Poison and commander damage"
+              className="flex items-baseline gap-[0.9em] rounded-full bg-black/50 px-[0.9em] py-[0.35em] backdrop-blur-sm"
+              aria-label="Counters"
             >
-              <Poison size="1.2em" className={p.poison ? 'text-mana-g' : 'text-bone/70'} />
-              <span className="font-cond font-bold tabular-nums">{p.poison}</span>
-              {isCmdr && (
-                <>
-                  <Sword size="1.1em" className={cmdrMax ? 'text-brass-2' : 'text-bone/70'} />
-                  <span className="font-cond font-bold tabular-nums">{cmdrMax}</span>
-                </>
-              )}
+              <Count label="Poison" value={p.poison} hot={p.poison > 0} />
+              {isCmdr && <Count label="Cmdr" value={cmdrMax} hot={cmdrMax > 0} />}
+              {extraName && <Count label={extraName} value={p.extra ?? 0} hot={(p.extra ?? 0) > 0} />}
             </button>
             <div className="flex-1" />
             <button
@@ -202,6 +192,15 @@ export default function Seat({ game, seat, rot, area, headerPad, dispatch }: Pro
   );
 }
 
+function Count({ label, value, hot }: { label: string; value: number; hot: boolean }) {
+  return (
+    <span className="flex items-baseline gap-[0.3em] whitespace-nowrap">
+      <span className="text-[0.75em] text-bone/70">{label}</span>
+      <span className={`font-cond text-[1.15em] font-bold tabular-nums ${hot ? 'text-brass-2' : ''}`}>{value}</span>
+    </span>
+  );
+}
+
 /** Running total of recent life changes, cleared after a pause. */
 function useDelta(life: number) {
   const prev = useRef(life);
@@ -239,7 +238,8 @@ function CounterPanel({
       if (op.hasPartner) sources.push({ from: i, partner: 1, who: op.name, label: op.partner?.name ?? 'Partner', colors: c });
     });
   }
-  const tiles = sources.length + 1;
+  const extraName = game.config.extraCounter?.trim();
+  const tiles = sources.length + 1 + (extraName ? 1 : 0);
   const cols = tiles <= 2 ? tiles : tiles <= 6 ? 3 : 4;
 
   return (
@@ -254,13 +254,24 @@ function CounterPanel({
           onPlus={() => dispatch({ t: 'poison', seat, d: 1 })}
           onMinus={() => dispatch({ t: 'poison', seat, d: -1 })}
         />
+        {extraName && (
+          <Tile
+            label={extraName}
+            who="Misplays"
+            value={p.extra ?? 0}
+            lethal={false}
+            stripe={['var(--color-brass)']}
+            onPlus={() => dispatch({ t: 'extra', seat, d: 1 })}
+            onMinus={() => dispatch({ t: 'extra', seat, d: -1 })}
+          />
+        )}
         {sources.map((s) => {
           const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
           return (
             <Tile
               key={`${s.from}:${s.partner}`}
               label={s.label}
-              who={`from ${s.who}`}
+              who={`Cmdr damage from ${s.who}`}
               value={v}
               lethal={v >= CMDR_LETHAL}
               stripe={s.colors}

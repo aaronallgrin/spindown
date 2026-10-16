@@ -20,6 +20,7 @@ function defaults(): GameConfig {
     layoutId: 'p4-sides',
     players: [blank(), blank(), blank(), blank()],
     cmdrDamageLosesLife: true,
+    extraCounter: '*',
   };
 }
 
@@ -105,7 +106,7 @@ export default function Setup() {
       </datalist>
 
       {lastConfig && (
-        <Btn className="mb-5 w-full" onClick={() => setCfg(lastConfig)}>
+        <Btn className="mb-5 w-full" onClick={() => setCfg({ ...lastConfig, extraCounter: lastConfig.extraCounter ?? '*' })}>
           Same table as last game
         </Btn>
       )}
@@ -160,6 +161,17 @@ export default function Setup() {
             Commander damage also takes life
           </label>
         )}
+        <label className="flex items-center gap-3 text-sm">
+          <span className="shrink-0">Misplay counter</span>
+          <input
+            id="extra-counter"
+            value={cfg.extraCounter ?? ''}
+            onChange={(e) => set({ extraCounter: e.target.value })}
+            placeholder="Leave blank to hide it"
+            maxLength={12}
+            className="min-w-0 flex-1 rounded-lg bg-felt-3 px-3 py-2 placeholder:text-dim/70"
+          />
+        </label>
       </section>
 
       <section className="flex flex-col gap-4">

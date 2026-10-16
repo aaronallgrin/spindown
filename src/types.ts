@@ -39,6 +39,8 @@ export interface GameConfig {
   players: PlayerSetup[];
   /** commander damage also subtracts life */
   cmdrDamageLosesLife: boolean;
+  /** name of the extra per-player counter; empty = not used */
+  extraCounter?: string;
 }
 
 export type OutCause = 'life' | 'commander' | 'poison' | 'concede' | 'other';
@@ -49,12 +51,14 @@ export interface LivePlayer {
   poison: number;
   /** key `${fromSeat}:${0|1}` (1 = partner) */
   cmdr: Record<string, number>;
+  /** the named extra counter */
+  extra?: number;
   out?: { round: number; turn: number; cause: OutCause; at: number };
   /** prompt already dismissed for current lethal state */
   lethalDismissed?: boolean;
 }
 
-export type EventKind = 'life' | 'poison' | 'cmdr' | 'monarch' | 'turn' | 'out' | 'first';
+export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'first';
 
 export interface GameEvent {
   at: number;
@@ -107,6 +111,7 @@ export interface PlayerResult {
   finalLife: number;
   finalPoison: number;
   cmdrDamageTaken: number;
+  finalExtra?: number;
   wasMonarchAtEnd: boolean;
 }
 

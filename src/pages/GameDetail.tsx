@@ -50,6 +50,7 @@ export default function GameDetail() {
               <Stat k="Final life" v={String(p.finalLife)} />
               <Stat k="Poison" v={String(p.finalPoison)} />
               {g.format === 'commander' && <Stat k="Cmdr damage taken" v={String(p.cmdrDamageTaken)} />}
+              {g.config.extraCounter && p.finalExtra != null && <Stat k={g.config.extraCounter} v={String(p.finalExtra)} />}
             </dl>
           </div>
         ))}

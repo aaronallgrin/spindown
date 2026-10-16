@@ -31,6 +31,7 @@ export function newGame(config: GameConfig): LiveGame {
       life: config.startingLife,
       poison: 0,
       cmdr: {},
+      extra: 0,
     })),
   };
 }
@@ -42,7 +43,8 @@ export type Action =
   | { t: 'monarch'; seat: number }
   | { t: 'pick'; seat: number }
   | { t: 'random' }
-  | { t: 'pass' }
+  | { t: 'extra'; seat: number; d: number }
+  | { t: 'round'; d: 1 | -1 }
   | { t: 'out'; seat: number; cause: OutCause }
   | { t: 'dismiss'; seat: number }
   | { t: 'end'; winner: number | null };
@@ -69,7 +71,7 @@ export function turnOrder(g: LiveGame): number[] {
 function log(g: LiveGame, e: Omit<GameEvent, 'at' | 'round' | 'turn'>): GameEvent[] {
   const at = Date.now();
   const last = g.events[g.events.length - 1];
-  const merges: EventKind[] = ['life', 'poison', 'cmdr'];
+  const merges: EventKind[] = ['life', 'poison', 'cmdr', 'extra'];
   if (
     last &&
     merges.includes(e.kind) &&
@@ -172,26 +174,22 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const seat = Math.floor(Math.random() * g.players.length);
       return { ...g, pickedSeat: seat };
     }
-    case 'pass': {
-      if (g.phase !== 'playing' || g.activeSeat == null) return g;
-      const order = turnOrder(g);
-      const idx = order.indexOf(g.activeSeat);
-      for (let step = 1; step <= order.length; step++) {
-        const ni = (idx + step) % order.length;
-        const seat = order[ni];
-        if (g.players[seat].out) continue;
-        const wrapped = ni <= idx;
-        const round = wrapped ? g.round + 1 : g.round;
-        const turn = g.turn + 1;
-        return {
-          ...g,
-          activeSeat: seat,
-          round,
-          turn,
-          events: [...g.events, { at: Date.now(), round, turn, seat, kind: 'turn' }],
-        };
-      }
-      return g;
+    case 'extra': {
+      const n = patch(g, a.seat, (p) => ({ ...p, extra: Math.max(0, (p.extra ?? 0) + a.d) }));
+      const real = (n.players[a.seat].extra ?? 0) - (g.players[a.seat].extra ?? 0);
+      if (!real) return g;
+      return { ...n, events: log(g, { kind: 'extra', seat: a.seat, delta: real }) };
+    }
+    case 'round': {
+      if (g.phase !== 'playing') return g;
+      const round = Math.max(1, g.round + a.d);
+      if (round === g.round) return g;
+      return {
+        ...g,
+        round,
+        turn: round,
+        events: [...g.events, { at: Date.now(), round, turn: round, seat: -1, kind: 'turn', delta: a.d }],
+      };
     }
     case 'out': {
       if (g.players[a.seat].out) return g;
@@ -247,6 +245,7 @@ export function toRecord(g: LiveGame): GameRecord {
       finalLife: p.life,
       finalPoison: p.poison,
       cmdrDamageTaken: Object.values(p.cmdr).reduce((a, b) => a + b, 0),
+      finalExtra: g.config.extraCounter ? (p.extra ?? 0) : undefined,
       wasMonarchAtEnd: g.monarchSeat === p.seat,
     };
   });

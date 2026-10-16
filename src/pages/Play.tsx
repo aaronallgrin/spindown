@@ -4,9 +4,9 @@ import { alive } from '../game';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
 import Seat from '../components/Seat';
-import { usePress } from '../components/usePress';
+import SpinDie from '../components/SpinDie';
 import ConfirmBtn from '../components/ConfirmBtn';
-import { Btn, D20, Pips } from '../ui';
+import { Btn, Pips } from '../ui';
 
 function useViewport() {
   const read = () => ({ w: window.innerWidth, h: window.innerHeight });
@@ -50,13 +50,6 @@ export default function Play() {
   const [menu, setMenu] = useState<null | 'main' | 'end'>(null);
   useWakeLock();
 
-  const d20Press = usePress(
-    () => (game?.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : dispatch({ t: 'pass' })),
-    () => setMenu('main'),
-    550,
-    1e9,
-  );
-
   if (!game) return <Navigate to="/" replace />;
 
   const layout = getLayout(game.config.layoutId);
@@ -68,8 +61,9 @@ export default function Play() {
   const w = portrait ? short : long;
   const h = portrait ? long : short;
 
-  // the d20 turns to face whoever is taking their turn
-  const activeRot = game.activeSeat != null ? layout.rot[game.activeSeat] : 0;
+  // the die reads upright for whoever went first, since they change the round
+  const facing = game.firstSeat != null ? layout.rot[game.firstSeat] : 0;
+  const spunYet = game.events.some((e) => e.kind === 'turn');
   const d20Size = Math.round(Math.min(w, h) * 0.2);
 
   const finish = async (rematch: boolean) => {
@@ -107,16 +101,19 @@ export default function Play() {
         ))}
 
         {game.phase !== 'over' && (
-          <button
-            {...d20Press}
-            aria-label={
-              game.phase === 'choosingFirst' ? 'Pick a random first player' : `Round ${game.round}. Tap to pass the turn, hold for menu`
+          <SpinDie
+            value={game.phase === 'choosingFirst' ? '?' : game.round}
+            size={d20Size}
+            facing={facing}
+            hint={game.phase === 'playing' && !spunYet ? 'Spin clockwise for round 2' : undefined}
+            label={
+              game.phase === 'choosingFirst'
+                ? 'Pick a random first player'
+                : `Round ${game.round}. Spin clockwise for the next round, counterclockwise to go back. Tap for menu.`
             }
-            className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transition-[rotate] duration-300"
-            style={{ rotate: `${activeRot}deg` }}
-          >
-            <D20 value={game.phase === 'choosingFirst' ? '?' : game.round} size={d20Size} />
-          </button>
+            onSpin={(d) => dispatch({ t: 'round', d })}
+            onTap={() => (game.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : setMenu('main'))}
+          />
         )}
 
         {game.phase === 'over' && (
@@ -155,6 +152,16 @@ export default function Play() {
                   <div className="mb-2 font-cond text-2xl font-bold">
                     {game.phase === 'playing' ? `Round ${game.round}` : 'Game menu'}
                   </div>
+                  {game.phase === 'playing' && (
+                    <div className="flex gap-2">
+                      <Btn className="flex-1" disabled={game.round <= 1} onClick={() => dispatch({ t: 'round', d: -1 })}>
+                        Round {Math.max(1, game.round - 1)}
+                      </Btn>
+                      <Btn className="flex-1" onClick={() => dispatch({ t: 'round', d: 1 })}>
+                        Round {game.round + 1}
+                      </Btn>
+                    </div>
+                  )}
                   <Btn
                     onClick={() => {
                       undo();
