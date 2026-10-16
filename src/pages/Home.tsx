@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -77,18 +77,7 @@ export default function Home() {
   return (
     <div className="home-glow min-h-full">
       <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pb-8 pt-9">
-        <header className="mb-7 flex items-center gap-3.5">
-          <div className="roll-in">
-            <D20 value="20" size={56} />
-          </div>
-          <div>
-            <h1 className="flex items-center font-cond text-[2.6rem] font-bold leading-none tracking-wide">
-              <span className="text-bone">Spin</span>
-              <span className="ml-1 rounded-lg bg-brass px-1.5 pb-0.5 text-felt">down</span>
-            </h1>
-            <p className="mt-1 text-[13px] text-dim">Created by aaronallgrin</p>
-          </div>
-        </header>
+        <Logo />
 
         {game && (
           <button
@@ -351,5 +340,65 @@ function SeatPill({ layout, on, onPick, onPeek }: { layout: Layout; on: boolean;
     >
       {layout.label}
     </button>
+  );
+}
+
+/**
+ * The logo. Tap the die to roll a real d20: it tumbles, lands on a number,
+ * the title flickers to "Random" for a moment, then settles back.
+ */
+function Logo() {
+  const [face, setFace] = useState<number | null>(null); // null = resting "20"
+  const [phase, setPhase] = useState<'rest' | 'rolling' | 'landed'>('rest');
+  const [turns, setTurns] = useState(0);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
+  const roll = () => {
+    if (phase !== 'rest') return;
+    const later = (ms: number, f: () => void) => timers.current.push(window.setTimeout(f, ms));
+    const result = 1 + Math.floor(Math.random() * 20);
+    setPhase('rolling');
+    setTurns((t) => t + 1);
+    // flicker through faces, slowing down like a real die
+    let t = 0;
+    [40, 50, 60, 70, 85, 100, 120, 145, 175].forEach((step) => {
+      t += step;
+      later(t, () => setFace(1 + Math.floor(Math.random() * 20)));
+    });
+    later(t + 200, () => {
+      setFace(result);
+      setPhase('landed');
+    });
+    later(t + 2300, () => {
+      setPhase('rest');
+      setFace(null);
+    });
+  };
+
+  const random = phase !== 'rest';
+  return (
+    <header className="mb-7 flex items-center gap-3.5">
+      <button
+        type="button"
+        onClick={roll}
+        aria-label={phase === 'landed' && face ? `Rolled ${face}` : 'Roll a d20'}
+        className="roll-in shrink-0 rounded-full"
+      >
+        <div
+          className="transition-[rotate,scale] duration-[1100ms] ease-[cubic-bezier(.15,.85,.25,1)]"
+          style={{ rotate: `${turns * 720}deg`, scale: phase === 'landed' ? '1.08' : '1' }}
+        >
+          <D20 value={face ?? 20} size={56} />
+        </div>
+      </button>
+      <div>
+        <h1 key={random ? 'random' : 'spindown'} className={`${turns ? 'title-flicker ' : ''}flex items-center font-cond text-[2.6rem] font-bold leading-none tracking-wide`}>
+          <span className="text-bone">{random ? 'Ran' : 'Spin'}</span>
+          <span className="ml-1 rounded-lg bg-brass px-1.5 pb-0.5 text-felt">{random ? 'dom' : 'down'}</span>
+        </h1>
+        <p className="mt-1 text-[13px] text-dim">Created by aaronallgrin</p>
+      </div>
+    </header>
   );
 }
