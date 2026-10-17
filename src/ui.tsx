@@ -112,8 +112,8 @@ export function Btn({ variant = 'quiet', className = '', ...p }: BtnProps) {
 
 export function Page({ title, back = '/', children, action }: { title: string; back?: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mx-auto min-h-full max-w-2xl px-4 pb-24">
-      <header className="sticky top-0 z-30 -mx-4 mb-4 flex items-center gap-3 bg-felt/80 px-4 pb-3 pt-4 backdrop-blur-md">
+    <div className="mx-auto min-h-full max-w-2xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+      <header className="sticky top-0 z-30 -mx-4 mb-4 flex items-center gap-3 bg-felt/80 px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-md">
         <Link
           to={back}
           className="grid h-9 w-9 place-items-center rounded-full bg-white/[.06] text-bone/80 transition hover:bg-white/10 hover:text-bone"

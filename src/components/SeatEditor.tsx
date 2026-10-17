@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CommanderPicker from './CommanderPicker';
 import { getCard } from '../scryfall';
 import { deckKey, usePlayerMemory } from './usePlayerMemory';
@@ -7,10 +7,13 @@ import { Btn, ManaPicker, Pips, Segmented, sortMana } from '../ui';
 
 /**
  * Full-screen form a player fills in after tapping their spot at the table.
- * Shown upright, since the phone keyboard always is.
+ * It opens turned the same way as that player's panel, so nobody has to pick
+ * the phone up and turn it. The phone's own keyboard still comes up along the
+ * bottom of the screen; a web app can't turn that.
  */
 export default function SeatEditor({
   seat,
+  rot = 0,
   format,
   initial,
   takenNames,
@@ -18,6 +21,8 @@ export default function SeatEditor({
   onClose,
 }: {
   seat: number;
+  /** degrees to turn the form so it faces the player, 0 = upright */
+  rot?: number;
   format: Format;
   initial: PlayerSetup;
   /** names already used at other seats this game */
@@ -46,8 +51,35 @@ export default function SeatEditor({
     });
   };
 
+  // size once per orientation; ignore the resize the keyboard causes so the form doesn't jump
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    const on = () => window.setTimeout(() => setVp({ w: window.innerWidth, h: window.innerHeight }), 250);
+    window.addEventListener('orientationchange', on);
+    return () => window.removeEventListener('orientationchange', on);
+  }, []);
+  const sideways = rot === 90 || rot === 270;
+  const turnedStyle = rot
+    ? {
+        position: 'absolute' as const,
+        top: '50%',
+        left: '50%',
+        width: sideways ? vp.h : vp.w,
+        height: sideways ? vp.w : vp.h,
+        translate: '-50% -50%',
+        rotate: `${rot}deg`,
+        // every edge could be the notch or home bar once turned
+        padding:
+          'max(env(safe-area-inset-top), env(safe-area-inset-bottom), env(safe-area-inset-left), env(safe-area-inset-right))',
+      }
+    : undefined;
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-felt" style={{ touchAction: 'pan-y' }}>
+    <div className="fixed inset-0 z-50 overflow-hidden bg-felt">
+      <div
+        className={rot ? 'overflow-y-auto' : 'absolute inset-0 overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'}
+        style={{ ...turnedStyle, touchAction: rot ? 'manipulation' : 'pan-y' }}
+      >
       <form
         className="mx-auto flex min-h-full max-w-md flex-col gap-4 px-4 pb-6 pt-5"
         onSubmit={(e) => {
@@ -179,6 +211,7 @@ export default function SeatEditor({
           </Btn>
         </div>
       </form>
+      </div>
     </div>
   );
 }

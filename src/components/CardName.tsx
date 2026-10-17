@@ -55,7 +55,7 @@ function CardViewer({ name, onClose }: { name: string; onClose: () => void }) {
       role="dialog"
       aria-label={name}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 overflow-y-auto bg-black/85 p-5 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 overflow-y-auto bg-black/85 p-5 backdrop-blur-sm pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
     >
       {err && <p className="rounded-xl bg-felt-2 p-4 text-dim">{err}</p>}
       {!card && !err && <div className="aspect-[5/7] w-[min(80vw,340px)] animate-pulse rounded-[4.5%] bg-felt-2" />}
