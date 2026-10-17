@@ -3,9 +3,12 @@ export type Format = 'commander' | 'constructed' | 'other';
 /** formats inside Constructed and Other, with starting life */
 /**
  * shared: everyone plays from one deck, so there's no deck to ask each player about.
- * setOnly: decks are just an opened pack, so ask for its set (kept in `theme`) and no deck name.
+ * fields: what the two deck boxes ask for in this format. `deck` fills deckName (a set or
+ * cube name for limited formats), `theme` fills theme; null hides that box.
  */
-export type SubFormat = { name: string; life: number; shared?: { deckName: string; colors: Mana[] }; setOnly?: boolean };
+export type DeckFields = { deck: string | null; theme: string | null };
+export type SubFormat = { name: string; life: number; shared?: { deckName: string; colors: Mana[] }; fields?: DeckFields };
+export const DEFAULT_FIELDS: DeckFields = { deck: 'Deck name', theme: 'Theme, like aggro, tokens, control' };
 export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
   constructed: [
     { name: 'Standard', life: 20 },
@@ -16,23 +19,23 @@ export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
     { name: 'Pauper', life: 20 },
   ],
   other: [
-    { name: 'Draft', life: 20 },
-    { name: 'Sealed', life: 20 },
-    { name: 'Cube', life: 20 },
+    { name: 'Draft', life: 20, fields: { deck: 'Set, like Bloomburrow', theme: DEFAULT_FIELDS.theme } },
+    { name: 'Sealed', life: 20, fields: { deck: 'Set, like Bloomburrow', theme: DEFAULT_FIELDS.theme } },
+    { name: 'Cube', life: 20, fields: { deck: "Cube name, like My Chaos Cube or Tim's Pre-modern", theme: 'What you drafted, like Boros aggro, reanimator' } },
     { name: 'Brawl', life: 25 },
     { name: 'Oathbreaker', life: 20 },
     // always one shared blue deck, 20 life each
     { name: 'Dandân', life: 20, shared: { deckName: 'Shared Dandân deck', colors: ['U'] } },
-    // a deck is one opened pack: record its set, no deck name
-    { name: 'Pai Gow', life: 20, setOnly: true },
+    // a deck is one opened pack: just its set
+    { name: 'Pai Gow', life: 20, fields: { deck: 'Set of your pack, like Bloomburrow', theme: null } },
     { name: 'Casual', life: 20 },
   ],
 };
 export type Mana = 'W' | 'U' | 'B' | 'R' | 'G';
 export const sharedDeck = (format: Format, subFormat?: string) =>
   format === 'commander' ? undefined : SUB_FORMATS[format].find((f) => f.name === subFormat)?.shared;
-export const setOnly = (format: Format, subFormat?: string) =>
-  format !== 'commander' && !!SUB_FORMATS[format].find((f) => f.name === subFormat)?.setOnly;
+export const deckFields = (format: Format, subFormat?: string): DeckFields =>
+  (format === 'commander' ? undefined : SUB_FORMATS[format].find((f) => f.name === subFormat)?.fields) ?? DEFAULT_FIELDS;
 export const MANA: Mana[] = ['W', 'U', 'B', 'R', 'G'];
 export type Orientation = 'portrait' | 'landscape';
 /** 0 = precon */
