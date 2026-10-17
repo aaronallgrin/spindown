@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { alive, seated, toRecord, type Action } from '../game';
 import TrophyList from '../components/Trophies';
 import type { LiveGame } from '../types';
 import SeatEditor from '../components/SeatEditor';
 import { funOn, setFun, toast } from '../components/toastBus';
+import { setTips, tipsFor } from '../components/tips';
 import { HATCH, ZENKAI, fmtSecs, trophies } from '../eggs';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
@@ -59,7 +60,11 @@ export default function Play() {
   const vp = useBox(areaRef, !!game);
   const [menu, setMenu] = useState<null | 'main' | 'end'>(null);
   const [editing, setEditing] = useState<number | null>(null);
-  const tip = useRoundTip(game);
+  // tips show for the first few games on this phone; the menu switch overrides that
+  const autoTips = useMemo(() => (game ? tipsFor(game.id) : false), [game?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [tipsChoice, setTipsChoice] = useState<boolean | null>(null);
+  const tipsOn = tipsChoice ?? autoTips;
+  const tip = useRoundTip(game, tipsOn);
   useWakeLock();
 
   if (!game) return <Navigate to="/" replace />;
@@ -111,6 +116,7 @@ export default function Play() {
             headerPad={pads[p.seat]}
             onEdit={() => setEditing(p.seat)}
             dispatch={dispatch}
+            coach={tipsOn && game.phase === 'playing' && !spunYet}
           />
         ))}
 
@@ -238,6 +244,16 @@ export default function Play() {
                   </Btn>
                   {game.phase === 'playing' && <Btn onClick={() => setMenu('end')}>End game now</Btn>}
                   <FunToggle />
+                  <Btn
+                    onClick={() => {
+                      setTips(!tipsOn);
+                      setTipsChoice(!tipsOn);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>Tips for new players</span>
+                    <span className={tipsOn ? 'text-brass' : 'text-dim'}>{tipsOn ? 'On' : 'Off'}</span>
+                  </Btn>
                   <Btn onClick={() => nav('/')}>Leave table, keep game</Btn>
                   <ConfirmBtn
                     variant="quiet"
@@ -379,15 +395,18 @@ function FunToggle() {
  * that spinning it moves the round on, and that this is the first player's job.
  * It fades on its own, on a tap, or as soon as the die is spun.
  */
-function useRoundTip(game: LiveGame | null) {
+function useRoundTip(game: LiveGame | null, on: boolean) {
   const [open, setOpen] = useState(false);
-  const live = game?.phase === 'playing' && game.round === 1 && !game.events.some((e) => e.kind === 'turn');
+  const live = on && game?.phase === 'playing' && game.round === 1 && !game.events.some((e) => e.kind === 'turn');
   const id = game?.id;
   useEffect(() => {
     if (!live) return;
     setOpen(true);
-    const t = window.setTimeout(() => setOpen(false), 7000);
-    return () => window.clearTimeout(t);
+    const t = window.setTimeout(() => setOpen(false), 9000);
+    return () => {
+      window.clearTimeout(t);
+      setOpen(false);
+    };
   }, [live, id]);
   return { open, close: () => setOpen(false) };
 }
@@ -414,13 +433,13 @@ function RoundTip({
         type="button"
         onClick={onClose}
         className="tip-in pointer-events-auto absolute left-0 -translate-x-1/2 rounded-2xl border border-brass/40 bg-black/65 px-4 py-3 text-left shadow-2xl backdrop-blur-sm"
-        style={{ top: gap, width: Math.min(width, 340) }}
+        style={{ top: gap, width: Math.min(width, 440) }}
       >
         <span className="block font-cond text-lg font-bold leading-tight text-brass">Round counter</span>
         <span className="mt-1 block text-sm leading-snug text-bone/90">
-          {name} went first, so the count is theirs. Spin the d20 clockwise at the start of each of their turns to tick the round up.
+          {name} went first, so the count is theirs: spin the d20 clockwise at the start of each of their turns.
         </span>
-        <span className="mt-1.5 block text-[11px] text-dim">Tap to dismiss</span>
+        <span className="mt-1 block text-sm leading-snug text-bone/90">Tap the d20 any time for the menu and Undo.</span>
       </button>
     </div>
   );
