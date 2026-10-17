@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import CommanderPicker from './CommanderPicker';
 import { getCard } from '../scryfall';
 import { deckKey, usePlayerMemory } from './usePlayerMemory';
-import { BRACKETS, type Format, type Mana, type PlayerSetup } from '../types';
+import { BRACKETS, sharedDeck, type Format, type Mana, type PlayerSetup } from '../types';
 import { Btn, ManaPicker, Pips, Segmented, sortMana } from '../ui';
 
 /**
@@ -15,6 +15,7 @@ export default function SeatEditor({
   seat,
   rot = 0,
   format,
+  subFormat,
   initial,
   takenNames,
   onSave,
@@ -24,6 +25,7 @@ export default function SeatEditor({
   /** degrees to turn the form so it faces the player, 0 = upright */
   rot?: number;
   format: Format;
+  subFormat?: string;
   initial: PlayerSetup;
   /** names already used at other seats this game */
   takenNames: string[];
@@ -33,9 +35,10 @@ export default function SeatEditor({
   const [p, setP] = useState<PlayerSetup>(initial);
   const memory = usePlayerMemory();
   const isCmdr = format === 'commander';
+  const shared = sharedDeck(format, subFormat);
   const set = (patch: Partial<PlayerSetup>) => setP((x) => ({ ...x, ...patch }));
 
-  const past = [...(memory.decks.get(p.name.trim().toLowerCase())?.values() ?? [])]
+  const past = shared ? [] : [...(memory.decks.get(p.name.trim().toLowerCase())?.values() ?? [])]
     .filter((d) => (isCmdr ? d.format === 'commander' : d.format !== 'commander'))
     .slice(0, 8);
   const name = p.name.trim();
@@ -43,6 +46,7 @@ export default function SeatEditor({
 
   const save = () => {
     if (!name || dupe) return;
+    if (shared) return onSave({ ...p, name, deckName: shared.deckName, theme: undefined, colors: shared.colors, hasPartner: false });
     onSave({
       ...p,
       name,
@@ -181,6 +185,13 @@ export default function SeatEditor({
               />
             </div>
           </>
+        ) : shared ? (
+          <div className="flex items-center gap-3 rounded-lg bg-felt-2 px-3 py-3">
+            <Pips colors={shared.colors} />
+            <span>
+              {subFormat}: everyone plays from one shared deck, 20 life each.
+            </span>
+          </div>
         ) : (
           <>
             <datalist id="past-themes">

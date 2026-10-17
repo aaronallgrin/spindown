@@ -10,7 +10,7 @@ import type {
   PlayerResult,
   PlayerSetup,
 } from './types';
-import { SUB_FORMATS } from './types';
+import { SUB_FORMATS, sharedDeck } from './types';
 
 export const POISON_LETHAL = 10;
 export const CMDR_LETHAL = 21;
@@ -36,6 +36,13 @@ export function makeConfig(format: Format, subFormat: string | undefined, player
 export const seated = (g: LiveGame) => g.config.players.every((p) => p.name.trim());
 
 export function newGame(config: GameConfig): LiveGame {
+  // one-deck formats (Dandân): every seat plays the same deck, whatever was carried over
+  const shared = sharedDeck(config.format, config.subFormat);
+  if (shared)
+    config = {
+      ...config,
+      players: config.players.map((p) => ({ ...p, deckName: shared.deckName, theme: undefined, colors: shared.colors, hasPartner: false, commander: undefined, partner: undefined })),
+    };
   const filled = config.players.every((p) => p.name.trim());
   return {
     id: crypto.randomUUID(),
