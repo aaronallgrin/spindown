@@ -82,7 +82,7 @@ export default function Home() {
           <p>Vikeo</p>
           <p>My local pod</p>
           <p>Queen &amp; Rooke</p>
-          <p className="mt-4 text-xs text-dim">Version: {__BUILD_DATE__}</p>
+          <VersionButton />
         </footer>
       </div>
     </div>
@@ -187,4 +187,24 @@ async function fetchUpdate() {
   } catch {
     /* offline or no service worker: a plain reload still happens */
   }
+}
+
+/** The version line. Tap it to check for a newer build and refresh. */
+function VersionButton() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        await fetchUpdate();
+        window.location.reload();
+      }}
+      aria-label="Refresh the app"
+      className="mt-4 rounded-md px-2 py-1 text-xs text-dim active:text-brass"
+    >
+      {busy ? 'Refreshing…' : `Version: ${__BUILD_DATE__}`}
+    </button>
+  );
 }
