@@ -6,6 +6,10 @@ import { D20 } from '../ui';
  * centre) to go to the next round, counterclockwise to go back. Clockwise is
  * the same from every seat, which a left/right swipe would not be.
  * A tap without movement calls onTap.
+ *
+ * While the round can be spun, the swipe zone is twice the area it used to be.
+ * That outer ring sits over the seats' own buttons, so a plain tap out there is
+ * handed to whatever is underneath; only the inner zone opens the menu.
  */
 export default function SpinDie({
   value,
@@ -30,6 +34,10 @@ export default function SpinDie({
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const ref = useRef<HTMLButtonElement>(null);
   const [spin, setSpin] = useState(0);
+  // the old zone (about 2.1x the die across) still opens the menu on a tap
+  const innerR = size * 1.05;
+  // twice that area while spinning: √2 times as wide
+  const pad = Math.round(spinnable ? size * (1.05 * Math.SQRT2 - 0.5) : size * 0.55);
 
   const end = (e: React.PointerEvent) => {
     const s = start.current;
@@ -37,10 +45,13 @@ export default function SpinDie({
     if (!s || s.id !== e.pointerId || !ref.current) return;
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
-    if (Math.hypot(dx, dy) < 14 || !spinnable) return onTap();
     const r = ref.current.getBoundingClientRect();
     const rx = s.x - (r.left + r.width / 2);
     const ry = s.y - (r.top + r.height / 2);
+    if (Math.hypot(dx, dy) < 14 || !spinnable) {
+      if (Math.hypot(rx, ry) > innerR) return passThrough(ref.current, e.clientX, e.clientY);
+      return onTap();
+    }
     // screen y points down, so a positive cross product is clockwise
     let cross = rx * dy - ry * dx;
     if (Math.hypot(rx, ry) < size * 0.12) cross = dx; // started dead centre: rightward counts as clockwise
@@ -51,15 +62,16 @@ export default function SpinDie({
 
   return (
     <div
-      className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+      // only the round button takes touches, not the square box around it
+      className="pointer-events-none absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
       style={{ rotate: `${facing}deg` }}
     >
       <button
         ref={ref}
         aria-label={label}
-        // invisible touch zone about twice the size of the die, so a sloppy swipe still lands
-        className="rounded-full"
-        style={{ touchAction: 'none', padding: Math.round(size * 0.55) }}
+        // invisible touch zone around the die, so a sloppy swipe still lands
+        className="pointer-events-auto rounded-full"
+        style={{ touchAction: 'none', padding: pad }}
         onPointerDown={(e) => {
           start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -89,4 +101,17 @@ export default function SpinDie({
       )}
     </div>
   );
+}
+
+/** Hand a tap that landed on the outer swipe ring to whatever is under it. */
+function passThrough(zone: HTMLElement, x: number, y: number) {
+  const prev = zone.style.pointerEvents;
+  zone.style.pointerEvents = 'none';
+  const under = document.elementFromPoint(x, y);
+  zone.style.pointerEvents = prev;
+  if (!under) return;
+  const init = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 1, isPrimary: true };
+  under.dispatchEvent(new PointerEvent('pointerdown', init));
+  under.dispatchEvent(new PointerEvent('pointerup', init));
+  under.dispatchEvent(new MouseEvent('click', init));
 }

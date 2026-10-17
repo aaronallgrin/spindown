@@ -284,17 +284,24 @@ function union(a?: Mana[], b?: Mana[]): Mana[] {
 
 /**
  * Past names that look like a typo, nickname or longer form of what was typed:
- * Cody/Coady, Colin/Collin, Kris/Chris, Chris/Christopher. Andrew/Andy is too different to catch.
+ * Cody/Coady, Colin/Collin, Kris/Chris, Dyl/Dylan, DSW or Spencer/David Spencer W.
+ * Andrew/Andy is too different to catch.
  * Closest first, at most three.
  */
 function similarNames(typed: string, names: string[]) {
   const a = soundKey(typed);
   if (a.length < 2) return [];
+  const aWords = words(typed);
   return names
     .map((n) => {
       const b = soundKey(n);
       if (!b) return null;
       if (a === b) return { n, d: 0 }; // only punctuation or spacing differs
+      const bWords = words(n);
+      // initials: DSW for David Spencer W…, either way round
+      if ((a.length >= 2 && a === initials(bWords)) || (b.length >= 2 && b === initials(aWords))) return { n, d: 1 };
+      // one word of a full name: Spencer for David Spencer W…, Dyl for Dylan Smith
+      if (oneWordOf(aWords, bWords) || oneWordOf(bWords, aWords)) return { n, d: 1 };
       const short = Math.min(a.length, b.length);
       if (short >= 3 && (a.startsWith(b) || b.startsWith(a))) return { n, d: 1 };
       const d = editDistance(a, b);
@@ -306,6 +313,12 @@ function similarNames(typed: string, names: string[]) {
     .slice(0, 3)
     .map((x) => x.n);
 }
+
+const words = (s: string) => s.split(/[\s._-]+/).map(soundKey).filter(Boolean);
+const initials = (w: string[]) => (w.length >= 2 ? w.map((x) => x[0]).join('') : '');
+/** a single typed word that is, or starts, one word of a longer name */
+const oneWordOf = (one: string[], full: string[]) =>
+  one.length === 1 && full.length >= 2 && one[0].length >= 3 && full.some((w) => w === one[0] || w.startsWith(one[0]));
 
 /** Spelling that sounds the same reads the same: Kris/Chris, Collin/Colin, Cody/Codie. */
 function soundKey(s: string) {
