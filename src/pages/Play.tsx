@@ -289,6 +289,7 @@ export default function Play() {
           // open facing the player who tapped, the same way their panel faces them
           rot={(layout.rot[editing] + (turned ? 90 : 0)) % 360}
           format={game.config.format}
+          subFormat={game.config.subFormat}
           initial={game.config.players[editing]}
           takenNames={game.config.players.filter((_, i) => i !== editing).map((p) => p.name).filter(Boolean)}
           onClose={() => setEditing(null)}

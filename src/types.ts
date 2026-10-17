@@ -1,7 +1,9 @@
 export type Format = 'commander' | 'constructed' | 'other';
 
 /** formats inside Constructed and Other, with starting life */
-export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, { name: string; life: number }[]> = {
+/** shared: everyone plays from one deck, so there's no deck to ask each player about */
+export type SubFormat = { name: string; life: number; shared?: { deckName: string; colors: Mana[] } };
+export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
   constructed: [
     { name: 'Standard', life: 20 },
     { name: 'Pioneer', life: 20 },
@@ -16,12 +18,15 @@ export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, { name: string; l
     { name: 'Cube', life: 20 },
     { name: 'Brawl', life: 25 },
     { name: 'Oathbreaker', life: 20 },
-    { name: 'Dandân', life: 20 },
+    // always one shared blue deck, 20 life each
+    { name: 'Dandân', life: 20, shared: { deckName: 'Shared Dandân deck', colors: ['U'] } },
     { name: 'Pai Gow', life: 20 },
     { name: 'Casual', life: 20 },
   ],
 };
 export type Mana = 'W' | 'U' | 'B' | 'R' | 'G';
+export const sharedDeck = (format: Format, subFormat?: string) =>
+  format === 'commander' ? undefined : SUB_FORMATS[format].find((f) => f.name === subFormat)?.shared;
 export const MANA: Mana[] = ['W', 'U', 'B', 'R', 'G'];
 export type Orientation = 'portrait' | 'landscape';
 /** 0 = precon */
