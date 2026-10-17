@@ -16,9 +16,11 @@ interface Props {
   headerPad?: { side: 'left' | 'right' | 'both'; px: number } | null;
   onEdit: () => void;
   dispatch: (a: Action) => void;
+  /** show the new-player hints on this panel */
+  coach?: boolean;
 }
 
-export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatch }: Props) {
+export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatch, coach }: Props) {
   const p = game.players[seat];
   const setup = game.config.players[seat];
   const [panel, setPanel] = useState(false);
@@ -30,6 +32,9 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
   const colors = sortMana(setup.colors);
   const extraName = game.config.extraCounter?.trim();
   const [keypad, setKeypad] = useState(false);
+  // hints fade once this player has used their panel
+  const used = useUsed(coach, `${p.life}|${p.poison}|${JSON.stringify(p.cmdr)}|${keypad || panel}`);
+  const showCoach = coach && !used && !p.out && !lethal;
 
   // quiet easter-egg line
   const [whisper, setWhisper] = useState<{ text: string; key: number } | null>(null);
@@ -173,9 +178,10 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
           <div className="absolute inset-x-0 bottom-[5px] flex items-center gap-[2cqw] px-[3cqw] pb-[2.5cqh]" style={{ fontSize: 'clamp(12px, 6.4cqh, 20px)' }}>
             <button
               onClick={() => setPanel(true)}
-              className="flex items-baseline gap-[0.9em] rounded-full bg-black/50 px-[0.9em] py-[0.35em] backdrop-blur-sm"
+              className="relative flex items-baseline gap-[0.9em] rounded-full bg-black/50 px-[0.9em] py-[0.35em] backdrop-blur-sm"
               aria-label="Counters"
             >
+              {showCoach && <CoachChip className="left-0">{isCmdr ? 'Poison & commander damage ↓' : 'Poison ↓'}</CoachChip>}
               <Count label="Poison" value={p.poison} hot={p.poison > 0} />
               {isCmdr && <Count label="Cmdr" value={cmdrMax} hot={cmdrMax > 0} />}
             </button>
@@ -183,8 +189,9 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
             <button
               onClick={() => setKeypad(true)}
               aria-label="Type a life total"
-              className="grid h-[2.1em] w-[2.1em] place-items-center rounded-full bg-black/50 text-bone/80 backdrop-blur-sm"
+              className="relative grid h-[2.1em] w-[2.1em] place-items-center rounded-full bg-black/50 text-bone/80 backdrop-blur-sm"
             >
+              {showCoach && <CoachChip className="right-0">Type a total ↓</CoachChip>}
               <KeypadIcon />
             </button>
             {extraName && (
@@ -202,6 +209,8 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               </button>
             )}
           </div>
+
+          {showCoach && <Coach />}
 
           {keypad && (
             <Keypad
@@ -322,6 +331,47 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
         </div>
       </div>
     </div>
+  );
+}
+
+/** true once `sig` changes while `on`; resets when `on` goes off */
+function useUsed(on: boolean | undefined, sig: string) {
+  const start = useRef<string | null>(null);
+  const [used, setUsed] = useState(false);
+  useEffect(() => {
+    if (!on) {
+      start.current = null;
+      setUsed(false);
+      return;
+    }
+    if (start.current == null) start.current = sig;
+    else if (sig !== start.current) setUsed(true);
+  }, [on, sig]);
+  return used;
+}
+
+/** faint labels on a player's own panel the first time they play */
+const coachChip = 'coach-in pointer-events-none absolute whitespace-nowrap rounded-full bg-black/60 px-[0.7em] py-[0.2em] font-sans font-semibold text-brass';
+
+function Coach() {
+  return (
+    <div className="pointer-events-none absolute inset-0" style={{ fontSize: 'clamp(9px, 4.6cqh, 14px)' }}>
+      <span className={coachChip} style={{ left: '3cqw', top: '50%', translate: '0 -50%', marginTop: '-8cqh' }}>
+        Tap −1 · hold −10
+      </span>
+      <span className={coachChip} style={{ right: '3cqw', top: '50%', translate: '0 -50%', marginTop: '-8cqh' }}>
+        Tap +1 · hold +10
+      </span>
+    </div>
+  );
+}
+
+/** a hint sitting just above the button it belongs to */
+function CoachChip({ className, children }: { className: string; children: string }) {
+  return (
+    <span className={`${coachChip} bottom-full mb-[0.5em] ${className}`} style={{ fontSize: '0.72em' }}>
+      {children}
+    </span>
   );
 }
 
