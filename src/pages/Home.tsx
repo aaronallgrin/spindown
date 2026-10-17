@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <div className="home-glow min-h-full">
-      <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pt-[9vh] pb-8">
+      <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pt-[calc(9vh+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
         <Logo />
 
         <div className="mt-10 flex flex-col gap-3">
@@ -109,7 +109,10 @@ function BigLink({ to, children, sub, tag, primary = false }: { to: string; chil
 
 /**
  * The logo. Tap the die to roll a real d20: it tumbles, lands on a number,
- * the title flickers to "Random" for a moment, then settles back.
+ * the title flickers to "Random" for a moment, then the app refreshes.
+ * The installed app has no browser refresh button, so this is how to pull the
+ * latest version: the check for an update starts with the roll and the reload
+ * happens once the die settles.
  */
 function Logo() {
   const [face, setFace] = useState<number | null>(null); // null = resting "20"
@@ -122,6 +125,7 @@ function Logo() {
     if (phase !== 'rest') return;
     const later = (ms: number, f: () => void) => timers.current.push(window.setTimeout(f, ms));
     const result = 1 + Math.floor(Math.random() * 20);
+    const updated = fetchUpdate();
     setPhase('rolling');
     setTurns((t) => t + 1);
     // flicker through faces, slowing down like a real die
@@ -134,9 +138,9 @@ function Logo() {
       setFace(result);
       setPhase('landed');
     });
-    later(t + 2300, () => {
-      setPhase('rest');
-      setFace(null);
+    later(t + 2300, async () => {
+      await updated;
+      window.location.reload();
     });
   };
 
@@ -166,4 +170,21 @@ function Logo() {
       <p className="mt-2 text-[13px] text-dim">Created by aaronallgrin</p>
     </header>
   );
+}
+
+/** Ask the service worker for a newer build and wait (briefly) for it to take over. */
+async function fetchUpdate() {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (!reg) return;
+    await reg.update();
+    const next = reg.installing ?? reg.waiting;
+    if (!next) return;
+    await new Promise<void>((done) => {
+      next.addEventListener('statechange', () => next.state === 'activated' && done());
+      window.setTimeout(done, 4000);
+    });
+  } catch {
+    /* offline or no service worker: a plain reload still happens */
+  }
 }
