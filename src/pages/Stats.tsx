@@ -25,12 +25,15 @@ import { TrophyIcon } from '../components/Trophies';
 import type { GameRecord } from '../types';
 import { TROPHY_INFO, eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
 
-const FKEY = 'spindown.statsFilters';
+// v2: stats open on Commander by default (Game history still lists every format).
+// New key so phones that saved "All formats" before start on Commander once; any choice after that is remembered.
+const FKEY = 'spindown.statsFilters.v2';
+const DEFAULT_F: Filters = { format: 'commander', players: 'all', days: 'all', player: 'all' };
 const loadF = (): Filters => {
   try {
-    return { format: 'all', players: 'all', days: 'all', player: 'all', ...JSON.parse(localStorage.getItem(FKEY) || '{}') };
+    return { ...DEFAULT_F, ...JSON.parse(localStorage.getItem(FKEY) || '{}') };
   } catch {
-    return { format: 'all', players: 'all', days: 'all', player: 'all' };
+    return DEFAULT_F;
   }
 };
 
