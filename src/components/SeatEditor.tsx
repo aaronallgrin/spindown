@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import CommanderPicker from './CommanderPicker';
 import { getCard } from '../scryfall';
 import { deckKey, usePlayerMemory } from './usePlayerMemory';
-import { BRACKETS, sharedDeck, type Format, type Mana, type PlayerSetup } from '../types';
+import { BRACKETS, setOnly, sharedDeck, type Format, type Mana, type PlayerSetup } from '../types';
 import { Btn, ManaPicker, Pips, Segmented, sortMana } from '../ui';
 
 /**
@@ -36,6 +36,7 @@ export default function SeatEditor({
   const memory = usePlayerMemory();
   const isCmdr = format === 'commander';
   const shared = sharedDeck(format, subFormat);
+  const packOnly = setOnly(format, subFormat);
   const set = (patch: Partial<PlayerSetup>) => setP((x) => ({ ...x, ...patch }));
 
   const past = shared ? [] : [...(memory.decks.get(p.name.trim().toLowerCase())?.values() ?? [])]
@@ -50,6 +51,7 @@ export default function SeatEditor({
     onSave({
       ...p,
       name,
+      deckName: packOnly ? undefined : p.deckName,
       partner: p.hasPartner ? p.partner : undefined,
       colors: isCmdr ? union(p.commander?.colorIdentity, p.hasPartner ? p.partner?.colorIdentity : undefined) : p.colors,
     });
@@ -199,17 +201,19 @@ export default function SeatEditor({
                 <option key={n} value={n} />
               ))}
             </datalist>
-            <input
-              value={p.deckName ?? ''}
-              onChange={(e) => set({ deckName: e.target.value })}
-              placeholder="Deck name"
-              className="w-full rounded-lg bg-felt-2 px-3 py-3 placeholder:text-dim"
-            />
+            {!packOnly && (
+              <input
+                value={p.deckName ?? ''}
+                onChange={(e) => set({ deckName: e.target.value })}
+                placeholder="Deck name"
+                className="w-full rounded-lg bg-felt-2 px-3 py-3 placeholder:text-dim"
+              />
+            )}
             <input
               list="past-themes"
               value={p.theme ?? ''}
               onChange={(e) => set({ theme: e.target.value })}
-              placeholder="Theme, like aggro, tokens, control"
+              placeholder={packOnly ? 'Set of your pack, like Bloomburrow' : 'Theme, like aggro, tokens, control'}
               className="w-full rounded-lg bg-felt-2 px-3 py-3 placeholder:text-dim"
             />
             <ManaPicker value={p.colors} onChange={(colors) => set({ colors })} />

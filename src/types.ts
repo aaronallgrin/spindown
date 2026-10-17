@@ -1,8 +1,11 @@
 export type Format = 'commander' | 'constructed' | 'other';
 
 /** formats inside Constructed and Other, with starting life */
-/** shared: everyone plays from one deck, so there's no deck to ask each player about */
-export type SubFormat = { name: string; life: number; shared?: { deckName: string; colors: Mana[] } };
+/**
+ * shared: everyone plays from one deck, so there's no deck to ask each player about.
+ * setOnly: decks are just an opened pack, so ask for its set (kept in `theme`) and no deck name.
+ */
+export type SubFormat = { name: string; life: number; shared?: { deckName: string; colors: Mana[] }; setOnly?: boolean };
 export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
   constructed: [
     { name: 'Standard', life: 20 },
@@ -20,13 +23,16 @@ export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
     { name: 'Oathbreaker', life: 20 },
     // always one shared blue deck, 20 life each
     { name: 'Dandân', life: 20, shared: { deckName: 'Shared Dandân deck', colors: ['U'] } },
-    { name: 'Pai Gow', life: 20 },
+    // a deck is one opened pack: record its set, no deck name
+    { name: 'Pai Gow', life: 20, setOnly: true },
     { name: 'Casual', life: 20 },
   ],
 };
 export type Mana = 'W' | 'U' | 'B' | 'R' | 'G';
 export const sharedDeck = (format: Format, subFormat?: string) =>
   format === 'commander' ? undefined : SUB_FORMATS[format].find((f) => f.name === subFormat)?.shared;
+export const setOnly = (format: Format, subFormat?: string) =>
+  format !== 'commander' && !!SUB_FORMATS[format].find((f) => f.name === subFormat)?.setOnly;
 export const MANA: Mana[] = ['W', 'U', 'B', 'R', 'G'];
 export type Orientation = 'portrait' | 'landscape';
 /** 0 = precon */
