@@ -43,11 +43,21 @@ export default function SeatEditor({
   const past = shared ? [] : [...(memory.decks.get(p.name.trim().toLowerCase())?.values() ?? [])]
     .filter((d) => (isCmdr ? d.format === 'commander' : d.format !== 'commander'))
     .slice(0, 8);
-  const name = p.name.trim();
+  const typed = p.name.trim();
+  // same name, different capitals: quietly use the saved spelling so stats stay together
+  const known = memory.names.find((n) => n.toLowerCase() === typed.toLowerCase());
+  const name = known ?? typed;
   const dupe = name && takenNames.some((t) => t.toLowerCase() === name.toLowerCase());
+  // a close but different name: ask before starting a new player in the stats
+  const [newPlayer, setNewPlayer] = useState('');
+  const lookalikes =
+    !typed || known || newPlayer.toLowerCase() === typed.toLowerCase()
+      ? []
+      : similarNames(typed, memory.names.filter((n) => !takenNames.some((t) => t.toLowerCase() === n.toLowerCase())));
+  const asking = lookalikes.length > 0;
 
   const save = () => {
-    if (!name || dupe) return;
+    if (!name || dupe || asking) return;
     if (shared) return onSave({ ...p, name, deckName: shared.deckName, theme: undefined, colors: shared.colors, hasPartner: false });
     onSave({
       ...p,
@@ -123,6 +133,33 @@ export default function SeatEditor({
             className="w-full rounded-lg bg-felt-2 px-3 py-3 text-xl font-semibold placeholder:font-normal placeholder:text-dim"
           />
           {dupe && <p className="mt-1 text-sm text-blood">Someone at the table already has that name.</p>}
+          {asking && !dupe && (
+            <div className="mt-2 rounded-lg border border-brass/40 bg-brass/10 p-3">
+              <div className="mb-2 text-sm">
+                {lookalikes.length === 1 ? 'Is this you?' : 'Is one of these you?'}{' '}
+                <span className="text-dim">Picking keeps your games together in stats.</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {lookalikes.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => set({ name: n })}
+                    className="rounded-full bg-brass px-3 py-1.5 text-sm font-semibold text-felt"
+                  >
+                    Yes, I'm {n}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setNewPlayer(typed)}
+                  className="rounded-full bg-white/[.08] px-3 py-1.5 text-sm"
+                >
+                  No, I'm new
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {past.length > 0 && (
@@ -231,8 +268,8 @@ export default function SeatEditor({
         )}
 
         <div className="mt-auto pt-4">
-          <Btn type="submit" variant="primary" disabled={!name || !!dupe} className="w-full py-4 font-cond text-2xl">
-            Take this seat
+          <Btn type="submit" variant="primary" disabled={!name || !!dupe || asking} className="w-full py-4 font-cond text-2xl">
+            {asking ? 'Answer the name question first' : 'Take this seat'}
           </Btn>
         </div>
       </form>
@@ -243,4 +280,54 @@ export default function SeatEditor({
 
 function union(a?: Mana[], b?: Mana[]): Mana[] {
   return sortMana([...new Set([...(a ?? []), ...(b ?? [])])]);
+}
+
+/**
+ * Past names that look like a typo, nickname or longer form of what was typed:
+ * Cody/Coady, Colin/Collin, Kris/Chris, Chris/Christopher. Andrew/Andy is too different to catch.
+ * Closest first, at most three.
+ */
+function similarNames(typed: string, names: string[]) {
+  const a = soundKey(typed);
+  if (a.length < 2) return [];
+  return names
+    .map((n) => {
+      const b = soundKey(n);
+      if (!b) return null;
+      if (a === b) return { n, d: 0 }; // only punctuation or spacing differs
+      const short = Math.min(a.length, b.length);
+      if (short >= 3 && (a.startsWith(b) || b.startsWith(a))) return { n, d: 1 };
+      const d = editDistance(a, b);
+      const allowed = short <= 4 ? 1 : short <= 7 ? 2 : 3;
+      return d <= allowed ? { n, d } : null;
+    })
+    .filter((x): x is { n: string; d: number } => !!x)
+    .sort((x, y) => x.d - y.d)
+    .slice(0, 3)
+    .map((x) => x.n);
+}
+
+/** Spelling that sounds the same reads the same: Kris/Chris, Collin/Colin, Cody/Codie. */
+function soundKey(s: string) {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/ph/g, 'f')
+    .replace(/ch|ck|k|q/g, 'c')
+    .replace(/ie$|ey$|y/g, 'i')
+    .replace(/(.)\1+/g, '$1');
+}
+
+/** Letters to add, drop, swap or change to get from a to b (neighbouring swaps count once). */
+function editDistance(a: string, b: string) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+  return d[a.length][b.length];
 }
