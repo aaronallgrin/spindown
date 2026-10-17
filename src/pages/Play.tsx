@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { alive, seated, toRecord, type Action } from '../game';
 import TrophyList from '../components/Trophies';
@@ -13,18 +13,22 @@ import SpinDie from '../components/SpinDie';
 import ConfirmBtn from '../components/ConfirmBtn';
 import { Btn, Pips } from '../ui';
 
-function useViewport() {
-  const read = () => ({ w: window.innerWidth, h: window.innerHeight });
-  const [v, setV] = useState(read);
-  useEffect(() => {
-    const on = () => setV(read());
-    window.addEventListener('resize', on);
-    window.addEventListener('orientationchange', on);
+/** Size of the table area: the screen minus the notch, status bar and home bar. */
+function useBox(ref: RefObject<HTMLDivElement | null>, live: boolean) {
+  const [v, setV] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => setV({ w: el.clientWidth || window.innerWidth, h: el.clientHeight || window.innerHeight });
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    window.addEventListener('orientationchange', read);
     return () => {
-      window.removeEventListener('resize', on);
-      window.removeEventListener('orientationchange', on);
+      ro.disconnect();
+      window.removeEventListener('orientationchange', read);
     };
-  }, []);
+  }, [ref, live]);
   return v;
 }
 
@@ -51,9 +55,11 @@ function useWakeLock() {
 export default function Play() {
   const { game, dispatch, undo, canUndo, saveAndClose, discard, start } = useStore();
   const nav = useNavigate();
-  const vp = useViewport();
+  const areaRef = useRef<HTMLDivElement>(null);
+  const vp = useBox(areaRef, !!game);
   const [menu, setMenu] = useState<null | 'main' | 'end'>(null);
   const [editing, setEditing] = useState<number | null>(null);
+  const tip = useRoundTip(game);
   useWakeLock();
 
   if (!game) return <Navigate to="/" replace />;
@@ -83,6 +89,7 @@ export default function Play() {
 
   return (
     <div className="table-root">
+      <div ref={areaRef} className="table-area">
       <div
         className="table"
         style={{
@@ -122,7 +129,7 @@ export default function Play() {
             value={game.phase === 'playing' ? game.round : game.phase === 'choosingFirst' ? '?' : ''}
             size={d20Size}
             facing={facing}
-            hint={game.phase === 'playing' && !spunYet ? 'Spin clockwise for round 2' : undefined}
+            hint={game.phase === 'playing' && !spunYet && !tip.open ? 'Spin clockwise for round 2' : undefined}
             label={
               game.phase === 'seating'
                 ? 'Game menu'
@@ -149,6 +156,17 @@ export default function Play() {
             }}
             onTap={() => (game.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : setMenu('main'))}
             spinnable={game.phase === 'playing'}
+          />
+        )}
+
+        {tip.open && game.phase === 'playing' && !spunYet && game.firstSeat != null && (
+          <RoundTip
+            name={game.config.players[game.firstSeat].name}
+            facing={facing}
+            gap={Math.round(d20Size * 0.62)}
+            // measured along the first player's own left-right, which is the table's height when they sit on a side
+            width={Math.round((facing % 180 ? h : w) * 0.7)}
+            onClose={tip.close}
           />
         )}
 
@@ -264,9 +282,12 @@ export default function Play() {
           </div>
         )}
       </div>
+      </div>
       {editing != null && (
         <SeatEditor
           seat={editing}
+          // open facing the player who tapped, the same way their panel faces them
+          rot={(layout.rot[editing] + (turned ? 90 : 0)) % 360}
           format={game.config.format}
           initial={game.config.players[editing]}
           takenNames={game.config.players.filter((_, i) => i !== editing).map((p) => p.name).filter(Boolean)}
@@ -349,5 +370,57 @@ function FunToggle() {
       <span>Fun messages</span>
       <span className={on ? 'text-brass' : 'text-dim'}>{on ? 'On' : 'Off'}</span>
     </Btn>
+  );
+}
+
+/**
+ * Once the first player is picked, a see-through card under the die explains
+ * that spinning it moves the round on, and that this is the first player's job.
+ * It fades on its own, on a tap, or as soon as the die is spun.
+ */
+function useRoundTip(game: LiveGame | null) {
+  const [open, setOpen] = useState(false);
+  const live = game?.phase === 'playing' && game.round === 1 && !game.events.some((e) => e.kind === 'turn');
+  const id = game?.id;
+  useEffect(() => {
+    if (!live) return;
+    setOpen(true);
+    const t = window.setTimeout(() => setOpen(false), 7000);
+    return () => window.clearTimeout(t);
+  }, [live, id]);
+  return { open, close: () => setOpen(false) };
+}
+
+function RoundTip({
+  name,
+  facing,
+  gap,
+  width,
+  onClose,
+}: {
+  name: string;
+  facing: number;
+  gap: number;
+  width: number;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-0 w-0"
+      style={{ rotate: `${facing}deg` }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="tip-in pointer-events-auto absolute left-0 -translate-x-1/2 rounded-2xl border border-brass/40 bg-black/65 px-4 py-3 text-left shadow-2xl backdrop-blur-sm"
+        style={{ top: gap, width: Math.min(width, 340) }}
+      >
+        <span className="block font-cond text-lg font-bold leading-tight text-brass">Round counter</span>
+        <span className="mt-1 block text-sm leading-snug text-bone/90">
+          {name} went first, so the count is theirs. Spin the d20 clockwise at the start of each of their turns to tick the round up.
+        </span>
+        <span className="mt-1.5 block text-[11px] text-dim">Tap to dismiss</span>
+      </button>
+    </div>
   );
 }
