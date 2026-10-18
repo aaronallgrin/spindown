@@ -4,19 +4,40 @@ const API = 'https://api.scryfall.com';
 const CACHE_KEY = 'spindown.cards';
 
 type Cache = Record<string, CardRef>;
+/** most recently looked-up cards kept on the phone; older ones are dropped */
+const MAX_CARDS = 300;
+const MAX_IMAGES = 100;
+
+/** keep only the newest `max` keys (objects keep insertion order) */
+function trim<T>(c: Record<string, T>, max: number) {
+  const keys = Object.keys(c);
+  for (const k of keys.slice(0, Math.max(0, keys.length - max))) delete c[k];
+  return c;
+}
+
+// read from storage once, then kept in memory
+let cards: Cache | null = null;
 const readCache = (): Cache => {
+  if (cards) return cards;
   try {
-    return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    cards = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') as Cache;
   } catch {
-    return {};
+    cards = {};
   }
+  return cards;
 };
 const writeCache = (c: Cache) => {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(trim(c, MAX_CARDS)));
   } catch {
     /* storage full or blocked */
   }
+};
+/** add or refresh a card so it counts as recently used */
+const remember = (c: Cache, ref: CardRef) => {
+  const k = ref.name.toLowerCase();
+  delete c[k];
+  c[k] = ref;
 };
 
 /** Card names that can lead a Commander deck, matching the typed text. */
@@ -35,7 +56,7 @@ export async function searchCommanders(q: string, signal?: AbortSignal): Promise
   const names: string[] = [];
   for (const c of body.data.slice(0, 12)) {
     const ref = toRef(c);
-    cache[ref.name.toLowerCase()] = ref;
+    remember(cache, ref);
     names.push(ref.name);
   }
   writeCache(cache);
@@ -49,7 +70,7 @@ export async function getCard(name: string): Promise<CardRef> {
   const res = await fetch(`${API}/cards/named?exact=${encodeURIComponent(name)}`);
   if (!res.ok) throw new Error(`No card named ${name}`);
   const ref = toRef(await res.json());
-  cache[ref.name.toLowerCase()] = ref;
+  remember(cache, ref);
   writeCache(cache);
   return ref;
 }
@@ -122,9 +143,10 @@ export async function getCardImages(name: string): Promise<{ name: string; image
     ? [c.image_uris.normal]
     : (c.card_faces ?? []).map((f: { image_uris?: { normal?: string } }) => f.image_uris?.normal).filter(Boolean);
   const out = { name: c.name as string, images, uri: c.scryfall_uri as string | undefined };
+  delete cache[key];
   cache[key] = out;
   try {
-    localStorage.setItem(IMG_CACHE, JSON.stringify(cache));
+    localStorage.setItem(IMG_CACHE, JSON.stringify(trim(cache, MAX_IMAGES)));
   } catch {
     /* ignore */
   }
