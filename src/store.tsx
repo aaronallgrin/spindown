@@ -3,9 +3,11 @@ import { newGame, reduce, toRecord, type Action } from './game';
 import { db } from './db';
 import { syncNow } from './sync';
 import type { GameConfig, LiveGame } from './types';
+import { packUndo, unpackUndo } from './undoStore';
 
 const CURRENT = 'spindown.current';
 const LAST_CONFIG = 'spindown.lastConfig';
+const UNDO = 'spindown.undo';
 
 const load = <T,>(k: string): T | null => {
   try {
@@ -41,8 +43,10 @@ const Ctx = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [game, setGame] = useState<LiveGame | null>(() => load<LiveGame>(CURRENT));
   const [lastConfig, setLastConfig] = useState<GameConfig | null>(() => load(LAST_CONFIG));
-  const history = useRef<LiveGame[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
+  // undo history comes back with the game after a reload
+  const [savedUndo] = useState(() => unpackUndo(load(UNDO), game));
+  const history = useRef<LiveGame[]>(savedUndo);
+  const [canUndo, setCanUndo] = useState(savedUndo.length > 0);
 
   // write the live game a moment after the last tap, not on every tap (a long game is
   // a big JSON string); flush right away if the app is hidden, closed or reloaded
@@ -52,6 +56,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const flush = () => {
       if (pending.current === undefined) return;
       save(CURRENT, pending.current);
+      save(UNDO, pending.current ? packUndo(history.current) : null);
       pending.current = undefined;
     };
     const t = window.setTimeout(flush, 300);
@@ -68,6 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const saveNow = (g: LiveGame | null) => {
     pending.current = undefined;
     save(CURRENT, g);
+    save(UNDO, null);
   };
 
   const dispatch = useCallback((a: Action) => {

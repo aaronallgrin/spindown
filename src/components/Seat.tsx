@@ -5,6 +5,7 @@ import type { LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
 import { Crown, Skull } from './icons';
 import { usePress } from './usePress';
+import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
 import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
 
@@ -178,7 +179,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
           <div className="absolute inset-x-0 bottom-[5px] flex items-center gap-[2cqw] px-[3cqw] pb-[2.5cqh]" style={{ fontSize: 'clamp(12px, 6.4cqh, 20px)' }}>
             <button
               onClick={() => setPanel(true)}
-              className="relative flex items-baseline gap-[0.9em] rounded-full bg-black/50 px-[0.9em] py-[0.35em] backdrop-blur-sm"
+              className="relative flex items-baseline gap-[0.9em] rounded-full bg-black/60 px-[0.9em] py-[0.35em]"
               aria-label="Counters"
             >
               {showCoach && <CoachChip className="left-0">{isCmdr ? 'Poison & commander damage ↓' : 'Poison ↓'}</CoachChip>}
@@ -189,7 +190,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
             <button
               onClick={() => setKeypad(true)}
               aria-label="Type a life total"
-              className="relative grid h-[2.1em] w-[2.1em] place-items-center rounded-full bg-black/50 text-bone/80 backdrop-blur-sm"
+              className="relative grid h-[2.1em] w-[2.1em] place-items-center rounded-full bg-black/60 text-bone/80"
             >
               {showCoach && <CoachChip className="right-0">Type a total ↓</CoachChip>}
               <KeypadIcon />
@@ -199,7 +200,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
                 {...star}
                 aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to add, hold to take one back`}
                 className={`flex h-[2.1em] min-w-[2.1em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
-                  (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/50 text-bone/80 backdrop-blur-sm'
+                  (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/60 text-bone/80'
                 }`}
               >
                 <span className="text-[1.5em] leading-none" style={{ marginTop: '0.25em' }}>
@@ -610,14 +611,14 @@ function Tile({
           <div key={i} className="flex-1" style={{ background: c }} />
         ))}
       </div>
-      <button onClick={onPlus} className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 pt-1" aria-label={`Add ${label}`}>
+      <button onClick={() => (buzz(), onPlus())} className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 pt-1" aria-label={`Add ${label}`}>
         <span className="w-full truncate text-center font-semibold leading-tight">{label}</span>
         <span className="w-full truncate text-center text-[0.8em] text-dim">{who}</span>
         <span className={`font-cond font-bold leading-none tabular-nums ${lethal ? 'text-blood' : ''}`} style={{ fontSize: '2.6em' }}>
           {value}
         </span>
       </button>
-      <button onClick={onMinus} className="w-[30%] max-w-12 border-l border-line/60 font-cond text-[1.6em] text-dim" aria-label={`Remove ${label}`}>
+      <button onClick={() => (buzz(), onMinus())} className="w-[30%] max-w-12 border-l border-line/60 font-cond text-[1.6em] text-dim" aria-label={`Remove ${label}`}>
         −
       </button>
     </div>

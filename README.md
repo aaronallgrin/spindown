@@ -19,6 +19,8 @@ npm run build
 
 Data lives on the device (IndexedDB). Use History, then Export backup to save a JSON copy.
 
+Cloud sync: run `supabase/games_updated_at.sql` once in the Supabase SQL Editor so game times come from the server clock, not each phone's.
+
 ## Find a game
 Availability polls for the group, kept in the same Supabase project as cloud sync.
 Run `supabase/polls.sql` once in the Supabase SQL Editor to add the `polls` and `poll_responses` tables.

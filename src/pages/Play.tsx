@@ -218,9 +218,7 @@ export default function Play() {
                   <div className="mb-2 font-cond text-2xl font-bold">
                     {game.phase === 'playing' ? `Round ${game.round}` : 'Game menu'}
                     {game.phase === 'playing' && (
-                      <span className="ml-2 font-sans text-sm font-normal text-dim">
-                        {fmtSecs((Date.now() - roundStart(game)) / 1000)} this round
-                      </span>
+                      <RoundClock since={roundStart(game)} />
                     )}
                   </div>
                   {game.phase === 'playing' && (
@@ -372,6 +370,16 @@ function TakeBack({ game, dispatch }: { game: LiveGame; dispatch: (a: Action) =>
 function roundStart(g: LiveGame) {
   const e = [...g.events].reverse().find((x) => x.kind === 'turn' || x.kind === 'first');
   return e?.at ?? g.startedAt;
+}
+
+/** time spent in the current round, ticking while the menu is open */
+function RoundClock({ since }: { since: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  return <span className="ml-2 font-sans text-sm font-normal text-dim">{fmtSecs(Math.max(0, now - since) / 1000)} this round</span>;
 }
 
 function FunToggle() {

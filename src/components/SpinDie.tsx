@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { D20 } from '../ui';
+import { buzz } from '../haptics';
 
 /**
  * The round counter. Spin it clockwise (a swipe going clockwise around its
@@ -57,6 +58,7 @@ export default function SpinDie({
     if (Math.hypot(rx, ry) < size * 0.12) cross = dx; // started dead centre: rightward counts as clockwise
     const dir = cross >= 0 ? 1 : -1;
     setSpin((x) => x + dir * 144);
+    buzz(15);
     onSpin(dir);
   };
 
