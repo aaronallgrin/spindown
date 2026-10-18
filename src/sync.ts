@@ -111,10 +111,12 @@ export function syncNow(): Promise<void> {
       }
 
       // pull everything changed since last time
-      const since = c.lastPull ? `&updated_at=gt.${encodeURIComponent(c.lastPull)}` : '';
+      // gte, not gt: a batch upload stamps every row with the same time, and a page can end
+      // partway through such a batch; re-reading the boundary rows is harmless (bulkPut)
+      const since = c.lastPull ? `&updated_at=gte.${encodeURIComponent(c.lastPull)}` : '';
       let newest = c.lastPull;
       for (let offset = 0; ; offset += 500) {
-        const r = await fetch(`${base(c)}?select=id,data,deleted,updated_at&order=updated_at.asc${since}&limit=500&offset=${offset}`, {
+        const r = await fetch(`${base(c)}?select=id,data,deleted,updated_at&order=updated_at.asc,id.asc${since}&limit=500&offset=${offset}`, {
           headers: headers(c),
         });
         if (!r.ok) throw new Error(`Download failed (${r.status}): ${(await r.text()).slice(0, 140)}`);

@@ -44,7 +44,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const history = useRef<LiveGame[]>([]);
   const [canUndo, setCanUndo] = useState(false);
 
-  useEffect(() => save(CURRENT, game), [game]);
+  // write the live game a moment after the last tap, not on every tap (a long game is
+  // a big JSON string); flush right away if the app is hidden, closed or reloaded
+  const pending = useRef<LiveGame | null | undefined>(undefined);
+  useEffect(() => {
+    pending.current = game;
+    const flush = () => {
+      if (pending.current === undefined) return;
+      save(CURRENT, pending.current);
+      pending.current = undefined;
+    };
+    const t = window.setTimeout(flush, 300);
+    const hide = () => document.visibilityState === 'hidden' && flush();
+    document.addEventListener('visibilitychange', hide);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener('visibilitychange', hide);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [game]);
+  // starting, saving or discarding a game is written immediately
+  const saveNow = (g: LiveGame | null) => {
+    pending.current = undefined;
+    save(CURRENT, g);
+  };
 
   const dispatch = useCallback((a: Action) => {
     setGame((g) => {
@@ -71,7 +95,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCanUndo(false);
     setLastConfig(c);
     save(LAST_CONFIG, c);
-    setGame(newGame(c));
+    const g = newGame(c);
+    saveNow(g);
+    setGame(g);
   }, []);
 
   const saveAndClose = useCallback(async () => {
@@ -82,6 +108,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     history.current = [];
     setCanUndo(false);
+    saveNow(null);
     setGame(null);
     return game.phase === 'over' ? game.id : null;
   }, [game]);
@@ -89,6 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const discard = useCallback(() => {
     history.current = [];
     setCanUndo(false);
+    saveNow(null);
     setGame(null);
   }, []);
 

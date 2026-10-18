@@ -22,7 +22,7 @@ export default defineConfig({
         theme_color: '#1b1b1b',
         background_color: '#1b1b1b',
         display: 'fullscreen',
-        orientation: 'any',
+        orientation: 'portrait',
         start_url: './',
         scope: './',
         icons: [
@@ -38,7 +38,13 @@ export default defineConfig({
           {
             urlPattern: /^https:\/\/cards\.scryfall\.io\//,
             handler: 'CacheFirst',
-            options: { cacheName: 'card-art', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 } },
+            options: {
+              cacheName: 'card-art',
+              // the art loads as a CSS background, which is a no-cors (opaque, status 0) request;
+              // without status 0 here Workbox never stores it and the art is missing offline
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 60, purgeOnQuotaError: true },
+            },
           },
         ],
       },
