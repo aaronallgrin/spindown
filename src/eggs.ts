@@ -105,15 +105,16 @@ export interface Trophy {
   name?: string;
 }
 
-export const TROPHY_INFO: Record<string, { title: string; text: string }> = {
-  'black-lotus': { title: 'Black Lotus', text: 'Did you just sell a Black Lotus to fund this turn?' },
-  blockbuster: { title: 'Blockbuster late fee', text: 'Be Kind, Rewind. You owe the table $3.50 in late fees for this match.' },
-  nokia: { title: 'Nokia 3310', text: "Indestructible. You took a beating and didn't crack." },
-  napster: { title: 'Napster', text: 'Illegal Downloading: 99% Complete. You downloaded a whole second life total.' },
-  participation: { title: 'Participation trophy', text: "You tried your best, and that's what matters." },
-  matrix: { title: 'The One', text: 'Stayed at 1 life for more than 3 turns and survived. He is the One.' },
-  hulk: { title: 'Hulk mode', text: "Caution: Gamma exposure approaching Hulk levels. Don't make it angry." },
-  hatch: { title: 'The Hatch', text: 'Execute DHARMA Protocol: Reset the timer or face the anomaly.' },
+/** `how` must match the rules in trophies() below. */
+export const TROPHY_INFO: Record<string, { title: string; text: string; how: string; table?: boolean }> = {
+  'black-lotus': { title: 'Black Lotus', text: 'Did you just sell a Black Lotus to fund this turn?', how: 'Win the game in round 2 or earlier.' },
+  blockbuster: { title: 'Blockbuster late fee', text: 'Be Kind, Rewind. You owe the table $3.50 in late fees for this match.', how: 'The game runs past round 20 or longer than 2 hours.', table: true },
+  nokia: { title: 'Nokia 3310', text: "Indestructible. You took a beating and didn't crack.", how: 'Win after taking more separate hits than anyone else, at least 5 (ties count).' },
+  napster: { title: 'Napster', text: 'Illegal Downloading: 99% Complete. You downloaded a whole second life total.', how: 'Drop below 5 life, then climb 10 or more above your low. Biggest comeback of the game gets it.' },
+  participation: { title: 'Participation trophy', text: "You tried your best, and that's what matters.", how: 'First player knocked out, in a game of 3 or more.' },
+  matrix: { title: 'The One', text: 'Stayed at 1 life for more than 3 turns and survived. He is the One.', how: 'Sit at exactly 1 life when 4 or more rounds tick over, and don\'t lose.' },
+  hulk: { title: 'Hulk mode', text: "Caution: Gamma exposure approaching Hulk levels. Don't make it angry.", how: 'Anyone hits 10,000 life. Goes to whoever ends with the most life.' },
+  hatch: { title: 'The Hatch', text: 'Execute DHARMA Protocol: Reset the timer or face the anomaly.', how: 'The game reaches round 108.', table: true },
 };
 
 /** Replay a saved game's events to recover each player's life over time. */
@@ -152,7 +153,7 @@ export function trophies(g: GameRecord): Trophy[] {
   const res: Trophy[] = [];
   const add = (id: string, seat: number) => {
     const p = g.players.find((x) => x.seat === seat);
-    res.push({ id, seat, name: p?.name, ...TROPHY_INFO[id] });
+    res.push({ id, seat, name: p?.name, title: TROPHY_INFO[id].title, text: TROPHY_INFO[id].text });
   };
   const winner = g.players.find((p) => p.result === 'win');
   const r = replay(g);
