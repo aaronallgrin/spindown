@@ -320,6 +320,16 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               )}
             </div>
           )}
+          {p.out && whisper && (
+            // the out overlay hides the header, so knockout lines show here instead
+            <div
+              key={whisper.key}
+              className="whisper pointer-events-none absolute inset-x-0 bottom-[6cqh] px-[4cqw] text-center italic leading-snug text-brass"
+              style={{ fontSize: 'clamp(11px, 5.5cqh, 16px)' }}
+            >
+              {whisper.text}
+            </div>
+          )}
 
           {game.phase === 'over' && game.winnerSeat === seat && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-brass/25 text-center">

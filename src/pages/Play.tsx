@@ -6,7 +6,7 @@ import type { LiveGame } from '../types';
 import SeatEditor from '../components/SeatEditor';
 import { funOn, setFun, toast } from '../components/toastBus';
 import { setTips, tipsFor } from '../components/tips';
-import { HATCH, TIM_CLEAN, ZENKAI, fmtSecs, timCleanWin, trophies } from '../eggs';
+import { HATCH, THREAT, TIM_CLEAN, ZENKAI, fmtSecs, rageQuit, threatSeat, timCleanWin, trophies } from '../eggs';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
 import Seat from '../components/Seat';
@@ -66,6 +66,7 @@ export default function Play() {
   const tipsOn = tipsChoice ?? autoTips;
   const tip = useRoundTip(game, tipsOn);
   useWakeLock();
+  useOutNotes(game, dispatch);
 
   if (!game) return <Navigate to="/" replace />;
 
@@ -178,7 +179,8 @@ export default function Play() {
 
         {game.phase === 'over' && (
           <div className="absolute inset-0 z-30 grid place-items-center bg-black/55 p-4">
-            <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-2xl bg-felt-2 p-5 shadow-2xl">
+            <div className="relative max-h-full w-full max-w-sm overflow-y-auto rounded-2xl bg-felt-2 p-5 shadow-2xl">
+              <EndedByConcede game={game} />
               <div className="mb-1 text-sm text-dim">
                 {game.round} {game.round === 1 ? "round" : "rounds"}, {Math.max(1, Math.round(((game.endedAt ?? Date.now()) - game.startedAt) / 60000))} min
               </div>
@@ -480,4 +482,39 @@ function TimEgg({ seat, dispatch }: { seat: number; dispatch: (a: Action) => voi
       <img src={`${import.meta.env.BASE_URL}eggs/tim-2.png`} alt="" className="bubble-r w-[22.5%] max-w-[6.9rem] self-end" />
     </button>
   );
+}
+
+/** Quiet lines when someone goes out: a rage quit on a concession, and Chris being The Threat. */
+function useOutNotes(game: LiveGame | null, dispatch: (a: Action) => void) {
+  // only react to knockouts that happen while this screen is open, not ones already in a resumed game
+  const seen = useRef(game?.events.length ?? 0);
+  useEffect(() => {
+    if (!game) return;
+    const fresh = game.events.slice(seen.current);
+    seen.current = game.events.length; // shrinks on undo, so a redone knockout counts again
+    if (!fresh.length || !funOn()) return;
+    for (const e of fresh) {
+      if (e.kind !== 'out') continue;
+      if (e.cause === 'concede') toast(e.seat, rageQuit());
+      const threat = threatSeat(
+        { events: game.events, format: game.config.format, playerCount: game.players.length },
+        (seat) => game.config.players[seat]?.name,
+      );
+      if (threat === e.seat) {
+        dispatch({ t: 'egg', seat: e.seat, egg: THREAT.id });
+        toast(e.seat, THREAT.text);
+      }
+    }
+  }, [game?.events.length]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** The concession that ended the game, flashed on the summary since it covers the table. */
+function EndedByConcede({ game }: { game: LiveGame }) {
+  const [text] = useState(() => {
+    const last = [...game.events].reverse().find((e) => e.kind === 'out');
+    if (!funOn() || last?.cause !== 'concede' || Date.now() - last.at > 5000) return null;
+    return `${game.config.players[last.seat]?.name}: ${rageQuit()}`;
+  });
+  if (!text) return null;
+  return <div className="whisper pointer-events-none absolute right-5 top-5 max-w-[60%] truncate text-sm italic text-brass">{text}</div>;
 }

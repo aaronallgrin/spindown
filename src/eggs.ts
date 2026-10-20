@@ -84,6 +84,21 @@ export const TIM_CLEAN: Egg = { id: 'tim-clean', text: 'A win with no asterisks.
 export const timCleanWin = (name: string | undefined, stars: number | undefined) =>
   name?.trim().toLowerCase() === 'tim' && !stars;
 
+/** Chris going out first on life in Commander isn't bad luck: he's The Threat. */
+export const THREAT: Egg = { id: 'the-threat', text: 'The Threat has been dealt with. Everyone saw it coming.' };
+export function threatSeat(
+  g: Pick<GameRecord, 'events' | 'format' | 'playerCount'>,
+  nameOf: (seat: number) => string | undefined,
+): number | null {
+  if (g.format !== 'commander' || g.playerCount < 3) return null;
+  const first = g.events.find((e) => e.kind === 'out' && e.cause !== 'opponentWon');
+  if (!first || first.cause !== 'life') return null;
+  return nameOf(first.seat)?.trim().toLowerCase() === 'chris' ? first.seat : null;
+}
+
+const RAGE = ['Rage quit.', 'Rage quit. The table respects it.', 'Rage quit. Deep breaths.'];
+export const rageQuit = () => pick(RAGE);
+
 export const ZENKAI: Egg = { id: 'zenkai', text: "Saiyan DNA activated. What doesn't kill you makes you stronger." };
 export const HATCH: Egg = { id: 'hatch', text: 'Execute DHARMA Protocol: Reset the timer or face the anomaly.' };
 
@@ -116,6 +131,7 @@ export const TROPHY_INFO: Record<string, { title: string; text: string; how: str
   blockbuster: { title: 'Blockbuster late fee', text: 'Be Kind, Rewind. You owe the table $3.50 in late fees for this match.', how: 'The game runs past round 20 or longer than 2 hours.', table: true },
   nokia: { title: 'Nokia 3310', text: "Indestructible. You took a beating and didn't crack.", how: 'Win after taking more separate hits than anyone else, at least 5 (ties count).' },
   napster: { title: 'Napster', text: 'Illegal Downloading: 99% Complete. You downloaded a whole second life total.', how: 'Drop below 5 life, then climb 10 or more above your low. Biggest comeback of the game gets it.' },
+  'the-threat': { title: 'The Threat', text: 'Knocked out first because everyone knew. That is a compliment.', how: 'Chris is the first one knocked out by life loss in a Commander game of 3 or more.' },
   participation: { title: 'Participation trophy', text: "You tried your best, and that's what matters.", how: 'First player knocked out, in a game of 3 or more.' },
   matrix: { title: 'The One', text: 'Stayed at 1 life for more than 3 turns and survived. He is the One.', how: 'Sit at exactly 1 life when 4 or more rounds tick over, and don\'t lose.' },
   hulk: { title: 'Hulk mode', text: "Caution: Gamma exposure approaching Hulk levels. Don't make it angry.", how: 'Anyone hits 10,000 life. Goes to whoever ends with the most life.' },
@@ -175,7 +191,9 @@ export function trophies(g: GameRecord): Trophy[] {
   if (best && best[1] >= 10) add('napster', best[0]);
 
   const firstOut = g.events.find((e) => e.kind === 'out' && e.cause !== 'opponentWon');
-  if (firstOut && g.playerCount > 2) add('participation', firstOut.seat);
+  const threat = threatSeat(g, (seat) => g.players.find((x) => x.seat === seat)?.name);
+  if (threat != null) add('the-threat', threat);
+  else if (firstOut && g.playerCount > 2) add('participation', firstOut.seat);
 
   for (const [seat, n] of r.atOneRounds) {
     const p = g.players.find((x) => x.seat === seat);
