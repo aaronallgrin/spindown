@@ -379,7 +379,8 @@ function RoundTimes({ games }: { games: GameRecord[] }) {
 }
 
 function TrophyCase({ games }: { games: GameRecord[] }) {
-  const won = games.flatMap((g) => trophies(g));
+  const won = games.flatMap((g) => trophies(g).map((t) => ({ ...t, g })));
+  const [open, setOpen] = useState<string | null>(null);
   const secrets = new Map<string, Set<string>>();
   for (const g of games)
     for (const e of eggsFound(g)) {
@@ -393,20 +394,72 @@ function TrophyCase({ games }: { games: GameRecord[] }) {
   return (
     <Section title="Trophy case">
       {ids.map((id) => {
+        const info = TROPHY_INFO[id];
+        const mine = won.filter((t) => t.id === id);
         const holders = new Map<string, number>();
-        won.filter((t) => t.id === id).forEach((t) => holders.set(t.name ?? 'The table', (holders.get(t.name ?? 'The table') ?? 0) + 1));
+        mine.forEach((t) => holders.set(t.name ?? 'The table', (holders.get(t.name ?? 'The table') ?? 0) + 1));
+        const ranked = [...holders.entries()].sort((a, b) => b[1] - a[1]);
+        const inGames = new Set(mine.map((t) => t.g.id)).size;
+        const last = mine.reduce((a, b) => (b.g.startedAt > a.g.startedAt ? b : a));
+        const isOpen = open === id;
         return (
-          <div key={id} className="flex items-start gap-3 px-2 py-2">
-            <TrophyIcon size={22} />
-            <div className="min-w-0">
-              <div className="font-semibold">{TROPHY_INFO[id].title}</div>
-              <div className="text-sm text-dim">
-                {[...holders.entries()]
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([n, c]) => (c > 1 ? `${n} ×${c}` : n))
-                  .join(', ')}
+          <div
+            key={id}
+            className="rounded-lg"
+            onPointerEnter={(e) => e.pointerType === 'mouse' && setOpen(id)}
+            onPointerLeave={(e) => e.pointerType === 'mouse' && setOpen((o) => (o === id ? null : o))}
+          >
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              onClick={() => setOpen(isOpen ? null : id)}
+              className="flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left"
+            >
+              <TrophyIcon size={22} />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">{info.title}</div>
+                <div className="text-sm text-dim">{ranked.map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join(', ')}</div>
               </div>
-            </div>
+              <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden className={`mt-1 shrink-0 text-dim transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {isOpen && (
+              <div className="mx-2 mb-2 rounded-lg bg-felt-3 p-3 text-sm">
+                <p className="italic text-dim">{info.text}</p>
+                <p className="mt-2">
+                  <span className="font-semibold text-brass">How to earn: </span>
+                  {info.how}
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="font-cond text-xl font-bold">{mine.length}</div>
+                    <div className="text-xs text-dim">times earned</div>
+                  </div>
+                  <div>
+                    <div className="font-cond text-xl font-bold">{Math.round((inGames / games.length) * 100)}%</div>
+                    <div className="text-xs text-dim">of games</div>
+                  </div>
+                  <Link to={`/history/${last.g.id}`} className="hover:text-brass">
+                    <div className="font-cond text-xl font-bold">{fmtDate(last.g.startedAt)}</div>
+                    <div className="text-xs text-dim">last earned</div>
+                  </Link>
+                </div>
+                {!info.table && (
+                  <div className="mt-3 flex flex-col gap-1">
+                    {ranked.map(([n, c]) => (
+                      <div key={n} className="flex items-center gap-2">
+                        <span className="w-20 truncate">{n}</span>
+                        <div className="h-2 flex-1 rounded bg-felt-2">
+                          <div className="h-2 rounded bg-brass" style={{ width: `${(c / ranked[0][1]) * 100}%` }} />
+                        </div>
+                        <span className="w-6 text-right tabular-nums text-dim">{c}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
