@@ -6,7 +6,7 @@ import type { LiveGame } from '../types';
 import SeatEditor from '../components/SeatEditor';
 import { funOn, setFun, toast } from '../components/toastBus';
 import { setTips, tipsFor } from '../components/tips';
-import { HATCH, ZENKAI, fmtSecs, trophies } from '../eggs';
+import { HATCH, TIM_CLEAN, ZENKAI, fmtSecs, timCleanWin, trophies } from '../eggs';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
 import Seat from '../components/Seat';
@@ -209,6 +209,13 @@ export default function Play() {
             </div>
           </div>
         )}
+
+        {game.phase === 'over' &&
+          game.winnerSeat != null &&
+          funOn() &&
+          timCleanWin(game.config.players[game.winnerSeat].name, game.players[game.winnerSeat]?.extra) && (
+            <TimEgg key={game.endedAt} seat={game.winnerSeat} dispatch={dispatch} />
+          )}
 
         {menu && (
           <div className="absolute inset-0 z-40 grid place-items-center bg-black/60 p-4" onClick={() => setMenu(null)}>
@@ -450,5 +457,27 @@ function RoundTip({
         <span className="mt-1 block text-sm leading-snug text-bone/90">Tap the d20 any time for the menu and Undo.</span>
       </button>
     </div>
+  );
+}
+
+/** Tim won with no * counters. Two text bubbles slide in over the summary; tap to close. */
+function TimEgg({ seat, dispatch }: { seat: number; dispatch: (a: Action) => void }) {
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    dispatch({ t: 'egg', seat, egg: TIM_CLEAN.id });
+    const t = setTimeout(() => setOpen(false), 6500);
+    return () => clearTimeout(t);
+  }, [seat, dispatch]);
+  if (!open) return null;
+  return (
+    <button
+      type="button"
+      aria-label="I will take this as a win with no asterisks. Hell yeah. Tap to close."
+      onClick={() => setOpen(false)}
+      className="tim-egg absolute inset-0 z-40 flex flex-col justify-center gap-3 bg-black/70 px-5"
+    >
+      <img src={`${import.meta.env.BASE_URL}eggs/tim-1.png`} alt="" className="bubble-l w-[78%] max-w-sm self-start" />
+      <img src={`${import.meta.env.BASE_URL}eggs/tim-2.png`} alt="" className="bubble-r w-[22.5%] max-w-[6.9rem] self-end" />
+    </button>
   );
 }

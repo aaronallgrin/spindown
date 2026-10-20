@@ -79,6 +79,11 @@ export function cmdrEgg(before: number, after: number): Egg | null {
   return null;
 }
 
+/** Just for Tim: he wins without picking up a single * (misplay) counter. */
+export const TIM_CLEAN: Egg = { id: 'tim-clean', text: 'A win with no asterisks.' };
+export const timCleanWin = (name: string | undefined, stars: number | undefined) =>
+  name?.trim().toLowerCase() === 'tim' && !stars;
+
 export const ZENKAI: Egg = { id: 'zenkai', text: "Saiyan DNA activated. What doesn't kill you makes you stronger." };
 export const HATCH: Egg = { id: 'hatch', text: 'Execute DHARMA Protocol: Reset the timer or face the anomaly.' };
 
