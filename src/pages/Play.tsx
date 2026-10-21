@@ -147,13 +147,13 @@ export default function Play() {
             value={game.phase === 'playing' ? game.round : game.phase === 'choosingFirst' ? '?' : ''}
             size={d20Size}
             facing={facing}
-            hint={game.phase === 'playing' && !spunYet && !tip.open ? 'Spin clockwise for round 2' : undefined}
+            hint={game.phase === 'playing' && !spunYet && !tip.open ? 'Tap for round 2 · hold for menu' : undefined}
             label={
               game.phase === 'seating'
                 ? 'Game menu'
                 : game.phase === 'choosingFirst'
                 ? 'Pick a random first player'
-                : `Round ${game.round}. Spin clockwise for the next round, counterclockwise to go back. Tap for menu.`
+                : `Round ${game.round}. Tap for the next round, double-tap to go back one, hold for the menu.`
             }
             onSpin={(d) => {
               dispatch({ t: 'round', d });
@@ -173,6 +173,7 @@ export default function Play() {
               }
             }}
             onTap={() => (game.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : setMenu('main'))}
+            onHold={() => setMenu('main')}
             spinnable={game.phase === 'playing'}
           />
         )}
@@ -421,8 +422,8 @@ function FunToggle() {
 
 /**
  * Once the first player is picked, a see-through card under the die explains
- * that spinning it moves the round on, and that this is the first player's job.
- * It fades on its own, on a tap, or as soon as the die is spun.
+ * that tapping it moves the round on, and that this is the first player's job.
+ * It fades on its own, on a tap, or as soon as the round moves on.
  */
 function useRoundTip(game: LiveGame | null, on: boolean) {
   const [open, setOpen] = useState(false);
@@ -466,9 +467,9 @@ function RoundTip({
       >
         <span className="block font-cond text-lg font-bold leading-tight text-brass">Round counter</span>
         <span className="mt-1 block text-sm leading-snug text-bone/90">
-          {name} went first, so the count is theirs: spin the d20 clockwise at the start of each of their turns.
+          {name} went first, so the count is theirs: tap the d20 at the start of each of their turns. Double-tap it to go back a round.
         </span>
-        <span className="mt-1 block text-sm leading-snug text-bone/90">Tap the d20 any time for the menu and Undo.</span>
+        <span className="mt-1 block text-sm leading-snug text-bone/90">Hold the d20 any time for the menu and Undo.</span>
       </button>
     </div>
   );
