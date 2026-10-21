@@ -33,6 +33,16 @@ function useBox(ref: RefObject<HTMLDivElement | null>, live: boolean) {
   return v;
 }
 
+/** Pin the page while the table is up so a browser tab can't scroll under the seats. */
+function useTableLock() {
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add('table-lock');
+    window.scrollTo(0, 0);
+    return () => html.classList.remove('table-lock');
+  }, []);
+}
+
 function useWakeLock() {
   useEffect(() => {
     let lock: WakeLockSentinel | null = null;
@@ -66,6 +76,7 @@ export default function Play() {
   const tipsOn = tipsChoice ?? autoTips;
   const tip = useRoundTip(game, tipsOn);
   useWakeLock();
+  useTableLock();
   useOutNotes(game, dispatch);
 
   if (!game) return <Navigate to="/" replace />;

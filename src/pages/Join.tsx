@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { decodeInvite, getSync, setSync, syncNow, testConnection } from '../sync';
+import { builtInSync, decodeInvite, getSync, setSync, syncNow, testConnection } from '../sync';
 import { Page } from '../ui';
 
 /** Opened from the QR code on another device's Sync screen. */
@@ -11,6 +11,11 @@ export default function Join() {
 
   useEffect(() => {
     (async () => {
+      // old invite links still work: the app is already connected
+      if (builtInSync) {
+        syncNow();
+        return setState('done');
+      }
       const c = decodeInvite(code);
       if (!c) {
         setState('error');
