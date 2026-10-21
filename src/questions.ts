@@ -107,7 +107,7 @@ FROM players WHERE place IS NOT NULL GROUP BY name HAVING COUNT(*) >= 2 ORDER BY
     title: 'Who deals the most commander damage?',
     keywords: 'commander damage voltron hits',
     sql: `SELECT from_player AS player, SUM(delta) AS commander_damage
-FROM events WHERE kind = 'cmdr' AND delta > 0 AND from_player IS NOT NULL
+FROM events WHERE kind = 'cmdr' AND delta > 0 AND from_player IS NOT NULL AND from_player <> player
 GROUP BY from_player ORDER BY commander_damage DESC;`,
     chart: { kind: 'hbar', label: 'player', value: 'commander_damage', format: 'num' },
   },

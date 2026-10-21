@@ -498,12 +498,15 @@ function CounterPanel({
   const isCmdr = game.config.format === 'commander';
   const sources: { from: number; partner: 0 | 1; label: string; who: string; colors: string[] }[] = [];
   if (isCmdr) {
-    game.config.players.forEach((op, i) => {
-      if (i === seat) return;
+    // opponents first, then your own commander (it can hit you too, e.g. when stolen)
+    const order = [...game.config.players.keys()].filter((i) => i !== seat).concat(seat);
+    for (const i of order) {
+      const op = game.config.players[i];
+      const who = i === seat ? 'your own commander' : op.name;
       const c = op.colors.length ? sortMana(op.colors).map((m) => manaVar[m]) : [manaVar.C];
-      sources.push({ from: i, partner: 0, who: op.name, label: op.commander?.name ?? 'Commander', colors: c });
-      if (op.hasPartner) sources.push({ from: i, partner: 1, who: op.name, label: op.partner?.name ?? 'Partner', colors: c });
-    });
+      sources.push({ from: i, partner: 0, who, label: op.commander?.name ?? 'Commander', colors: c });
+      if (op.hasPartner) sources.push({ from: i, partner: 1, who, label: op.partner?.name ?? 'Partner', colors: c });
+    }
   }
   const tiles = sources.length + 2;
   const cols = tiles <= 2 ? tiles : tiles <= 6 ? 3 : 4;
