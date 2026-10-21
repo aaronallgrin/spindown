@@ -1,5 +1,6 @@
 import { db } from './db';
 import type { GameRecord } from './types';
+import { GROUP_CLOUD } from './cloud';
 
 /**
  * Two-way sync of saved games with a Supabase table (see the setup SQL in README).
@@ -17,12 +18,22 @@ export interface SyncConfig {
   lastSync?: number;
 }
 
-export const getSync = (): SyncConfig | null => {
+/** True when the app ships with the group's connection, so there's nothing to set up. */
+export const builtInSync = !!GROUP_CLOUD;
+
+const readSaved = (): SyncConfig | null => {
   try {
     return JSON.parse(localStorage.getItem(CFG) || 'null');
   } catch {
     return null;
   }
+};
+
+export const getSync = (): SyncConfig | null => {
+  const saved = readSaved();
+  // the built-in connection always wins; the phone only keeps its sync progress
+  if (GROUP_CLOUD) return { lastPull: saved?.lastPull, lastSync: saved?.lastSync, ...GROUP_CLOUD };
+  return saved;
 };
 export const setSync = (c: SyncConfig | null) => {
   try {
@@ -110,7 +121,10 @@ export function syncNow(): Promise<void> {
         localStorage.setItem(PENDING_DELETES, '[]');
       }
 
-      // pull everything changed since last time
+      // pull everything changed since last time; if this phone has no games (new phone, or the
+      // browser cleared its storage) start from scratch so the whole history comes back
+      const empty = (await db.games.count()) === 0;
+      if (empty) c.lastPull = undefined;
       // gte, not gt: a batch upload stamps every row with the same time, and a page can end
       // partway through such a batch; re-reading the boundary rows is harmless (bulkPut)
       const since = c.lastPull ? `&updated_at=gte.${encodeURIComponent(c.lastPull)}` : '';
@@ -141,8 +155,11 @@ export function syncNow(): Promise<void> {
 
 /** Sync on start, when the phone comes back online, and every few minutes while open. */
 export function startAutoSync() {
+  // ask the browser not to clear this app's storage when the phone is low on space
+  navigator.storage?.persist?.().catch(() => {});
   syncNow();
   window.addEventListener('online', () => syncNow());
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && syncNow());
   window.setInterval(() => document.visibilityState === 'visible' && syncNow(), 5 * 60 * 1000);
 }
 

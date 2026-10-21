@@ -52,6 +52,16 @@ button {
   outline-offset: 2px;
 }
 
+/* while the table is up, nothing behind it can scroll: in a browser tab (not the installed app)
+   the page could otherwise scroll and show scroll bars over the seats' touch areas */
+html.table-lock,
+html.table-lock body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* ---------- play table ---------- */
 
 .table-root {

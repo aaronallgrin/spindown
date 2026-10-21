@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import QRCode from 'qrcode';
-import { getSync, inviteLink, onSyncChange, setSync, syncNow, syncState, testConnection, type SyncConfig } from '../sync';
+import { builtInSync, getSync, inviteLink, onSyncChange, setSync, syncNow, syncState, testConnection, type SyncConfig } from '../sync';
 import ConfirmBtn from '../components/ConfirmBtn';
 import { Btn, Page } from '../ui';
 
@@ -114,15 +114,23 @@ export default function Sync() {
             Games sync by themselves when you save one, when the app opens, and every few minutes while it's open. Offline games
             upload when the phone is back online.
           </p>
-          <Invite cfg={cfg} />
-          <ConfirmBtn
-            variant="quiet"
-            onConfirm={() => setSync(null)}
-            confirmLabel="Tap again to disconnect this device"
-            className="mt-4"
-          >
-            Disconnect this device
-          </ConfirmBtn>
+          {builtInSync ? (
+            <p className="text-sm text-dim">
+              Every phone that opens Spindown is connected to the group automatically. There's nothing to set up or share.
+            </p>
+          ) : (
+            <>
+              <Invite cfg={cfg} />
+              <ConfirmBtn
+                variant="quiet"
+                onConfirm={() => setSync(null)}
+                confirmLabel="Tap again to disconnect this device"
+                className="mt-4"
+              >
+                Disconnect this device
+              </ConfirmBtn>
+            </>
+          )}
         </div>
       )}
     </Page>
