@@ -320,8 +320,9 @@ export default function Play() {
       {editing != null && (
         <SeatEditor
           seat={editing}
-          // open facing the player who tapped, the same way their panel faces them
-          rot={(layout.rot[editing] + (turned ? 90 : 0)) % 360}
+          // while seating, the phone is held upright to type in names and commanders;
+          // once the game is on, open facing the player who tapped, like their panel
+          rot={game.phase === 'seating' ? 0 : (layout.rot[editing] + (turned ? 90 : 0)) % 360}
           format={game.config.format}
           subFormat={game.config.subFormat}
           initial={game.config.players[editing]}
