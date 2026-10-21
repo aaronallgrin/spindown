@@ -122,7 +122,7 @@ ORDER BY turn_order;`,
     name: 'Who deals the most commander damage?',
     sql: `SELECT from_player, SUM(delta) AS commander_damage
 FROM events
-WHERE kind = 'cmdr' AND delta > 0
+WHERE kind = 'cmdr' AND delta > 0 AND from_player <> player
 GROUP BY from_player
 ORDER BY commander_damage DESC;`,
   },
