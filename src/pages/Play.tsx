@@ -63,6 +63,8 @@ function useWakeLock() {
   }, []);
 }
 
+type Sheet = { seat: number; kind: 'panel' | 'keypad' };
+
 export default function Play() {
   const { game, dispatch, undo, canUndo, saveAndClose, discard, start } = useStore();
   const nav = useNavigate();
@@ -70,6 +72,9 @@ export default function Play() {
   const vp = useBox(areaRef, !!game);
   const [menu, setMenu] = useState<null | 'main' | 'end'>(null);
   const [editing, setEditing] = useState<number | null>(null);
+  // one player's counters or life keypad open at a time; tapping anywhere else just closes it
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [banner, setBanner] = useState(false);
   // tips show for the first few games on this phone; the menu switch overrides that
   const autoTips = useMemo(() => (game ? tipsFor(game.id) : false), [game?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [tipsChoice, setTipsChoice] = useState<boolean | null>(null);
@@ -78,6 +83,20 @@ export default function Play() {
   useWakeLock();
   useTableLock();
   useOutNotes(game, dispatch);
+
+  // once the last seat is filled, go straight to picking who goes first
+  const allSeated = !!game && game.phase === 'seating' && seated(game);
+  useEffect(() => {
+    if (allSeated && editing == null) dispatch({ t: 'ready' });
+  }, [allSeated, editing, dispatch]);
+  // and say so for a moment, without needing a tap
+  const choosing = game?.phase === 'choosingFirst';
+  useEffect(() => {
+    if (choosing) setBanner(true);
+  }, [choosing]);
+  useEffect(() => {
+    if (game?.phase !== 'playing') setSheet(null);
+  }, [game?.phase]);
 
   if (!game) return <Navigate to="/" replace />;
 
@@ -127,24 +146,31 @@ export default function Play() {
             area={seatLetter(p.seat)}
             headerPad={pads[p.seat]}
             onEdit={() => setEditing(p.seat)}
+            sheet={sheet?.seat === p.seat ? sheet.kind : null}
+            setSheet={(kind) => setSheet(kind ? { seat: p.seat, kind } : null)}
             dispatch={dispatch}
             coach={tipsOn && game.phase === 'playing' && !spunYet}
           />
         ))}
 
-        {game.phase === 'seating' && seated(game) && (
-          <button
-            onClick={() => dispatch({ t: 'ready' })}
-            className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-brass px-5 py-3 font-cond text-xl font-bold leading-tight text-felt shadow-2xl"
+        {sheet && (
+          // swallows the tap that closes an open panel, so it can't also change another player's life
+          <div className="absolute inset-0 z-[24]" onClick={() => setSheet(null)} aria-hidden />
+        )}
+
+        {banner && game.phase === 'choosingFirst' && (
+          <div
+            className="first-banner pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-2xl bg-brass px-5 py-3 text-center font-cond text-xl font-bold leading-tight text-felt shadow-2xl"
+            onAnimationEnd={() => setBanner(false)}
           >
             Everyone's in
             <span className="block font-sans text-sm font-semibold">Pick who goes first</span>
-          </button>
+          </div>
         )}
 
-        {game.phase !== 'over' && !(game.phase === 'seating' && seated(game)) && (
+        {game.phase !== 'over' && (
           <SpinDie
-            value={game.phase === 'playing' ? game.round : game.phase === 'choosingFirst' ? '?' : ''}
+            value={game.phase === 'playing' ? game.round : ''}
             size={d20Size}
             facing={facing}
             hint={game.phase === 'playing' && !spunYet && !tip.open ? 'Tap for round 2 · hold for menu' : undefined}
@@ -152,7 +178,7 @@ export default function Play() {
               game.phase === 'seating'
                 ? 'Game menu'
                 : game.phase === 'choosingFirst'
-                ? 'Pick a random first player'
+                ? 'Roll a d20'
                 : `Round ${game.round}. Tap for the next round, double-tap to go back one, hold for the menu.`
             }
             onSpin={(d) => {
@@ -172,9 +198,10 @@ export default function Play() {
                 game.players.forEach((p) => toast(p.seat, HATCH.text));
               }
             }}
-            onTap={() => (game.phase === 'choosingFirst' ? dispatch({ t: 'random' }) : setMenu('main'))}
+            onTap={() => setMenu('main')}
             onHold={() => setMenu('main')}
             spinnable={game.phase === 'playing'}
+            dice={game.phase === 'choosingFirst'}
           />
         )}
 
