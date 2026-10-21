@@ -183,8 +183,11 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               aria-label="Counters"
             >
               {showCoach && <CoachChip className="left-0">{isCmdr ? 'Poison & commander damage ↓' : 'Poison ↓'}</CoachChip>}
-              <Count label="Poison" value={p.poison} hot={p.poison > 0} />
-              {isCmdr && <Count label="Cmdr" value={cmdrMax} hot={cmdrMax > 0} />}
+              <span className="text-[0.85em] text-bone/80">Counters</span>
+              {/* a dot once any poison or commander damage is on this player */}
+              {(p.poison > 0 || (isCmdr && cmdrMax > 0)) && (
+                <span className="h-[0.45em] w-[0.45em] self-center rounded-full bg-brass-2" aria-hidden />
+              )}
             </button>
             <div className="flex-1" />
             <button
@@ -382,15 +385,6 @@ function CoachChip({ className, children }: { className: string; children: strin
   return (
     <span className={`${coachChip} bottom-full mb-[0.5em] ${className}`} style={{ fontSize: '0.72em' }}>
       {children}
-    </span>
-  );
-}
-
-function Count({ label, value, hot }: { label: string; value: number; hot: boolean }) {
-  return (
-    <span className="flex items-baseline gap-[0.3em] whitespace-nowrap">
-      <span className="text-[0.75em] text-bone/70">{label}</span>
-      <span className={`font-cond text-[1.15em] font-bold tabular-nums ${hot ? 'text-brass-2' : ''}`}>{value}</span>
     </span>
   );
 }
