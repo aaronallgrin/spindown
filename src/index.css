@@ -209,6 +209,17 @@ html.table-lock body {
   to { opacity: 1; }
 }
 
+/* "pick who goes first" comes in, holds, then dissolves on its own */
+@keyframes bannerFade {
+  0% { opacity: 0; scale: 0.9; }
+  12% { opacity: 1; scale: 1; }
+  70% { opacity: 1; scale: 1; filter: blur(0); }
+  100% { opacity: 0; scale: 1.06; filter: blur(4px); }
+}
+.first-banner {
+  animation: bannerFade 2400ms ease-out both;
+}
+
 /* ---------- home ---------- */
 .home-glow {
   background:

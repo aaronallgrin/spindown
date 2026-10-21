@@ -4,8 +4,9 @@ A Magic: The Gathering life counter for one shared phone, built for 4-player Com
 
 ## What it tracks
 - Life, poison, commander damage per opposing commander (partners counted separately), monarch
+- Counters screen also sets a life total or gains/loses an amount; tap anywhere else to back out
 - Center d20: shows the round; tap to pass the turn clockwise, hold for the menu (undo, end game, leave, discard)
-- First player: tap a seat, tap again to confirm (or tap the die for a random pick)
+- First player: once everyone's seated, tap a seat, tap again to confirm (tapping the die rolls a plain d20 if no one has dice)
 - Eliminations prompt automatically at 0 life, 10 poison or 21 commander damage, and record the round
 - Commander games: commander and partner via Scryfall, color identity, bracket 1–5
 - Other formats: deck name, theme, colors

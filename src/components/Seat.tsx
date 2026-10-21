@@ -16,15 +16,18 @@ interface Props {
   area: string;
   headerPad?: { side: 'left' | 'right' | 'both'; px: number } | null;
   onEdit: () => void;
+  /** this player's open overlay, if any (held by the table so a tap elsewhere closes it) */
+  sheet: 'panel' | 'keypad' | null;
+  setSheet: (s: 'panel' | 'keypad' | null) => void;
   dispatch: (a: Action) => void;
   /** show the new-player hints on this panel */
   coach?: boolean;
 }
 
-export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatch, coach }: Props) {
+export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, setSheet, dispatch, coach }: Props) {
   const p = game.players[seat];
   const setup = game.config.players[seat];
-  const [panel, setPanel] = useState(false);
+  const panel = sheet === 'panel';
   const delta = useDelta(p.life);
   const isCmdr = game.config.format === 'commander';
   const lethal = game.phase === 'playing' ? lethalCause(game, p) : null;
@@ -32,7 +35,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
   const art = setup.commander?.artCrop;
   const colors = sortMana(setup.colors);
   const extraName = game.config.extraCounter?.trim();
-  const [keypad, setKeypad] = useState(false);
+  const keypad = sheet === 'keypad';
   // hints fade once this player has used their panel
   const used = useUsed(coach, `${p.life}|${p.poison}|${JSON.stringify(p.cmdr)}|${keypad || panel}`);
   const showCoach = coach && !used && !p.out && !lethal;
@@ -178,11 +181,11 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
           {/* footer: counters near the player */}
           <div className="absolute inset-x-0 bottom-[5px] flex items-center gap-[2cqw] px-[3cqw] pb-[2.5cqh]" style={{ fontSize: 'clamp(12px, 6.4cqh, 20px)' }}>
             <button
-              onClick={() => setPanel(true)}
+              onClick={() => setSheet('panel')}
               className="relative flex items-baseline gap-[0.9em] rounded-full bg-black/60 px-[0.9em] py-[0.35em]"
               aria-label="Counters"
             >
-              {showCoach && <CoachChip className="left-0">{isCmdr ? 'Poison & commander damage ↓' : 'Poison ↓'}</CoachChip>}
+              {showCoach && <CoachChip className="left-0">{isCmdr ? 'Damage, poison, set life ↓' : 'Poison, set life ↓'}</CoachChip>}
               <span className="text-[0.85em] text-bone/80">Counters</span>
               {/* a dot once any poison or commander damage is on this player */}
               {(p.poison > 0 || (isCmdr && cmdrMax > 0)) && (
@@ -190,14 +193,6 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               )}
             </button>
             <div className="flex-1" />
-            <button
-              onClick={() => setKeypad(true)}
-              aria-label="Type a life total"
-              className="relative grid h-[2.1em] w-[2.1em] place-items-center rounded-full bg-black/60 text-bone/80"
-            >
-              {showCoach && <CoachChip className="right-0">Type a total ↓</CoachChip>}
-              <KeypadIcon />
-            </button>
             {extraName && (
               <button
                 {...star}
@@ -219,15 +214,17 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
           {keypad && (
             <Keypad
               life={p.life}
-              onClose={() => setKeypad(false)}
+              onClose={() => setSheet('panel')}
               onApply={(value) => {
                 dispatch({ t: 'setLife', seat, value });
-                setKeypad(false);
+                setSheet(null);
               }}
             />
           )}
 
-          {panel && <CounterPanel game={game} seat={seat} dispatch={dispatch} close={() => setPanel(false)} />}
+          {panel && (
+            <CounterPanel game={game} seat={seat} dispatch={dispatch} close={() => setSheet(null)} openLife={() => setSheet('keypad')} />
+          )}
 
           {game.phase === 'seating' && (
             <button
@@ -281,9 +278,18 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, dispatc
               ) : (
                 <span>
                   Tap to go first
-                  <span className="block font-sans text-[0.45em] font-medium text-dim">or tap the die for a random pick</span>
                 </span>
               )}
+            </button>
+          )}
+          {game.phase === 'choosingFirst' && (
+            // the seat can still be fixed after everyone sat down
+            <button
+              onClick={onEdit}
+              className="absolute bottom-[4cqh] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-[0.9em] py-[0.3em] text-bone/70"
+              style={{ fontSize: 'clamp(10px, 5cqh, 15px)' }}
+            >
+              Change seat
             </button>
           )}
 
@@ -408,14 +414,6 @@ function useSettled<T>(value: T, cb: (before: T, after: T) => void, ms = 1200) {
   }, [value, ms]);
 }
 
-function KeypadIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="1.1em" height="1.1em" fill="currentColor" aria-hidden>
-      {[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={3 + c * 7} y={3 + r * 7} width="4" height="4" rx="1" />))}
-    </svg>
-  );
-}
-
 /** Type a new life total, or an amount gained or lost, instead of tapping. */
 function Keypad({ life, onApply, onClose }: { life: number; onApply: (v: number) => void; onClose: () => void }) {
   const [mode, setMode] = useState<'set' | 'gain' | 'lose'>('set');
@@ -454,7 +452,7 @@ function Keypad({ life, onApply, onClose }: { life: number; onApply: (v: number)
           ⌫
         </button>
         <button onClick={onClose} className={`${key} text-[0.8em] font-sans font-semibold text-dim`}>
-          Cancel
+          Back
         </button>
       </div>
       <button
@@ -488,11 +486,13 @@ function CounterPanel({
   seat,
   dispatch,
   close,
+  openLife,
 }: {
   game: LiveGame;
   seat: number;
   dispatch: (a: Action) => void;
   close: () => void;
+  openLife: () => void;
 }) {
   const p = game.players[seat];
   const isCmdr = game.config.format === 'commander';
@@ -505,12 +505,24 @@ function CounterPanel({
       if (op.hasPartner) sources.push({ from: i, partner: 1, who: op.name, label: op.partner?.name ?? 'Partner', colors: c });
     });
   }
-  const tiles = sources.length + 1;
+  const tiles = sources.length + 2;
   const cols = tiles <= 2 ? tiles : tiles <= 6 ? 3 : 4;
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col bg-felt/95 p-[2.5cqh]" style={{ fontSize: 'clamp(10px, 5cqh, 16px)' }}>
       <div className="grid flex-1 gap-[1.5cqh]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+        <button
+          onClick={openLife}
+          className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg bg-felt-3 px-1 pt-1"
+          aria-label="Set, gain or lose life"
+        >
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-brass" />
+          <span className="w-full truncate text-center font-semibold leading-tight">Life</span>
+          <span className="w-full truncate text-center text-[0.8em] text-dim">Set · gain · lose</span>
+          <span className="font-cond font-bold leading-none tabular-nums" style={{ fontSize: '2.6em' }}>
+            {p.life}
+          </span>
+        </button>
         <Tile
           label="Poison"
           who={`${POISON_LETHAL} is lethal`}

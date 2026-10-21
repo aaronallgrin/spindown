@@ -77,7 +77,6 @@ export type Action =
   | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
-  | { t: 'random' }
   | { t: 'extra'; seat: number; d: number }
   | { t: 'round'; d: 1 | -1 }
   | { t: 'out'; seat: number; cause: OutCause }
@@ -230,11 +229,6 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         startedAt: Date.now(),
         events: [{ at: Date.now(), round: 1, turn: 1, seat: a.seat, kind: 'first' }],
       };
-    }
-    case 'random': {
-      if (g.phase !== 'choosingFirst') return g;
-      const seat = Math.floor(Math.random() * g.players.length);
-      return { ...g, pickedSeat: seat };
     }
     case 'extra': {
       const n = patch(g, a.seat, (p) => ({ ...p, extra: Math.max(0, (p.extra ?? 0) + a.d) }));
