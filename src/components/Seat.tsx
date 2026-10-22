@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CMDR_LETHAL, POISON_LETHAL, lethalCause, type Action } from '../game';
 import type { Rot } from '../layouts';
 import type { LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
-import { Crown, Skull } from './icons';
+import { Crown, Poison, Skull, Sword } from './icons';
 import { usePress } from './usePress';
 import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
@@ -39,6 +39,17 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
   // hints fade once this player has used their panel
   const used = useUsed(coach, `${p.life}|${p.poison}|${JSON.stringify(p.cmdr)}|${keypad || panel}`);
   const showCoach = coach && !used && !p.out && !lethal;
+  const monarch = game.monarchSeat === seat;
+  // one hit from lethal: the edge of the panel pulses red
+  const danger =
+    game.phase === 'playing' &&
+    !p.out &&
+    !lethal &&
+    (p.poison >= POISON_LETHAL - 2 ||
+      (isCmdr && cmdrMax >= CMDR_LETHAL - 5) ||
+      p.life <= Math.max(3, Math.ceil(game.config.startingLife / 8)));
+  const shown = useRolling(p.life);
+  const flash = useFlash(p.life);
 
   // quiet easter-egg line
   const [whisper, setWhisper] = useState<{ text: string; key: number } | null>(null);
@@ -148,24 +159,34 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                 </div>
               )}
             </div>
+            {monarch && !p.out && (
+              <span className="crown-in shrink-0 text-brass" title="Monarch" aria-label="Monarch" style={{ marginTop: '0.4cqh' }}>
+                <Crown size="11cqh" />
+              </span>
+            )}
           </div>
 
           {/* life with tap halves */}
+          {flash && <div key={flash.key} className={`life-flash ${flash.gain ? 'gain' : 'loss'}`} aria-hidden />}
+          {danger && <div className="danger-edge" aria-hidden />}
+
           <div className="absolute inset-0 flex">
-            <button aria-label={`${setup.name} lose 1 life`} className="flex-1" {...minus}>
-              <span className="absolute left-[6cqw] top-1/2 -translate-y-1/2 font-cond text-bone/35" style={{ fontSize: 'clamp(20px, 14cqh, 52px)' }}>
+            <button aria-label={`${setup.name} lose 1 life`} className="half half-l flex-1" {...minus}>
+              <span className="glyph absolute left-[6cqw] top-1/2 -translate-y-1/2 font-cond text-bone/35" style={{ fontSize: 'clamp(20px, 14cqh, 52px)' }}>
                 −
               </span>
             </button>
-            <button aria-label={`${setup.name} gain 1 life`} className="flex-1" {...plus}>
-              <span className="absolute right-[6cqw] top-1/2 -translate-y-1/2 font-cond text-bone/35" style={{ fontSize: 'clamp(20px, 14cqh, 52px)' }}>
+            <button aria-label={`${setup.name} gain 1 life`} className="half half-r flex-1" {...plus}>
+              <span className="glyph absolute right-[6cqw] top-1/2 -translate-y-1/2 font-cond text-bone/35" style={{ fontSize: 'clamp(20px, 14cqh, 52px)' }}>
                 +
               </span>
             </button>
           </div>
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
             <div className="relative">
-              <div className={`life-num ${p.life <= 0 ? 'text-blood' : ''}`}>{p.life}</div>
+              <div className={`life-num ${p.life <= 0 ? 'text-blood' : ''} ${p.out ? 'invisible' : ''}`} aria-live="polite">
+                {shown}
+              </div>
               {delta !== 0 && (
                 <div
                   key={delta}
@@ -182,14 +203,33 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
           <div className="absolute inset-x-0 bottom-[5px] flex items-center gap-[2cqw] px-[3cqw] pb-[2.5cqh]" style={{ fontSize: 'clamp(12px, 6.4cqh, 20px)' }}>
             <button
               onClick={() => setSheet('panel')}
-              className="relative flex items-baseline gap-[0.9em] rounded-full bg-black/60 px-[0.9em] py-[0.35em]"
-              aria-label="Counters"
+              className="relative flex items-center gap-[0.7em] rounded-full bg-black/60 px-[0.9em] py-[0.35em] transition active:scale-95"
+              aria-label={[
+                'Counters',
+                p.poison ? `${p.poison} poison` : '',
+                isCmdr && cmdrMax ? `${cmdrMax} commander damage from one commander` : '',
+              ]
+                .filter(Boolean)
+                .join(', ')}
             >
-              {showCoach && <CoachChip className="left-0">{isCmdr ? 'Damage, poison, set life ↓' : 'Poison, set life ↓'}</CoachChip>}
-              <span className="text-[0.85em] text-bone/80">Counters</span>
-              {/* a dot once any poison or commander damage is on this player */}
-              {(p.poison > 0 || (isCmdr && cmdrMax > 0)) && (
-                <span className="h-[0.45em] w-[0.45em] self-center rounded-full bg-brass-2" aria-hidden />
+              {/* what's on this player shows right on the button, so nobody has to open it to check */}
+              {p.poison > 0 || (isCmdr && cmdrMax > 0) ? (
+                <>
+                  {p.poison > 0 && (
+                    <Badge tone={p.poison >= POISON_LETHAL - 2 ? 'hot' : 'poison'}>
+                      <Poison size="1.05em" />
+                      {p.poison}
+                    </Badge>
+                  )}
+                  {isCmdr && cmdrMax > 0 && (
+                    <Badge tone={cmdrMax >= CMDR_LETHAL - 5 ? 'hot' : 'cmdr'}>
+                      <Sword size="1.05em" />
+                      {cmdrMax}
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <span className="text-[0.85em] text-bone/80">Counters</span>
               )}
             </button>
             <div className="flex-1" />
@@ -209,7 +249,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
             )}
           </div>
 
-          {showCoach && <Coach />}
+          {showCoach && <Coach isCmdr={isCmdr} />}
 
           {keypad && (
             <Keypad
@@ -310,7 +350,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
           )}
 
           {p.out && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center grayscale">
+            <div className="out-veil absolute inset-0 flex flex-col items-center justify-center text-center">
               <Skull size="22cqh" className="text-bone/60" />
               <div className="font-cond font-bold" style={{ fontSize: 'clamp(16px, 10cqh, 34px)' }}>
                 Out in round {p.out.round}
@@ -370,29 +410,70 @@ function useUsed(on: boolean | undefined, sig: string) {
   return used;
 }
 
-/** faint labels on a player's own panel the first time they play */
-const coachChip = 'coach-in pointer-events-none absolute whitespace-nowrap rounded-full bg-black/60 px-[0.7em] py-[0.2em] font-sans font-semibold text-brass';
-
-function Coach() {
+/**
+ * One hint per panel the first few games, near the player's own edge (clear of the die).
+ * Goes away once they use their panel.
+ */
+function Coach({ isCmdr }: { isCmdr: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-0" style={{ fontSize: 'clamp(9px, 4.6cqh, 14px)' }}>
-      <span className={coachChip} style={{ left: '3cqw', top: '50%', translate: '0 -50%', marginTop: '-8cqh' }}>
-        Tap −1 · hold −10
-      </span>
-      <span className={coachChip} style={{ right: '3cqw', top: '50%', translate: '0 -50%', marginTop: '-8cqh' }}>
-        Tap +1 · hold +10
+    <div
+      className="coach-in pointer-events-none absolute inset-x-0 bottom-[17cqh] flex justify-center px-[3cqw]"
+      style={{ fontSize: 'clamp(9px, 4.6cqh, 14px)' }}
+    >
+      <span className="max-w-full rounded-full bg-black/70 px-[0.9em] py-[0.25em] text-center font-semibold leading-snug text-brass">
+        Tap a side ±1 · hold ±10 · Counters for {isCmdr ? 'damage' : 'poison'}
       </span>
     </div>
   );
 }
 
-/** a hint sitting just above the button it belongs to */
-function CoachChip({ className, children }: { className: string; children: string }) {
+function Badge({ tone, children }: { tone: 'poison' | 'cmdr' | 'hot'; children: ReactNode }) {
+  const color = tone === 'hot' ? 'text-blood' : tone === 'poison' ? 'text-mana-g' : 'text-bone/90';
   return (
-    <span className={`${coachChip} bottom-full mb-[0.5em] ${className}`} style={{ fontSize: '0.72em' }}>
+    <span className={`flex items-center gap-[0.25em] font-cond font-bold leading-none tabular-nums ${color}`} style={{ fontSize: '1.15em' }}>
       {children}
     </span>
   );
+}
+
+/** Shown life counts toward the real total instead of jumping, a few steps a frame for big swings. */
+function useRolling(target: number) {
+  const [shown, setShown] = useState(target);
+  const cur = useRef(target);
+  useEffect(() => {
+    if (cur.current === target) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      cur.current = target;
+      setShown(target);
+      return;
+    }
+    let raf = 0;
+    const tick = () => {
+      const gap = target - cur.current;
+      if (!gap) return;
+      cur.current += Math.sign(gap) * Math.max(1, Math.ceil(Math.abs(gap) / 6));
+      setShown(cur.current);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return shown;
+}
+
+/** A quick red or green wash over the panel each time life changes. */
+function useFlash(life: number) {
+  const prev = useRef(life);
+  const [flash, setFlash] = useState<{ key: number; gain: boolean } | null>(null);
+  useEffect(() => {
+    const diff = life - prev.current;
+    prev.current = life;
+    if (!diff) return;
+    setFlash({ key: Date.now(), gain: diff > 0 });
+    const t = window.setTimeout(() => setFlash(null), 600);
+    return () => window.clearTimeout(t);
+  }, [life]);
+  return flash;
 }
 
 /** Calls back with the value before and after once it stops changing for a moment. */
@@ -554,6 +635,16 @@ function CounterPanel({
       <div className="mt-[2cqh] flex gap-2">
         {!p.out && game.phase === 'playing' && (
           <>
+            <button
+              onClick={() => (buzz(), dispatch({ t: 'monarch', seat }))}
+              aria-pressed={game.monarchSeat === seat}
+              aria-label={game.monarchSeat === seat ? 'Monarch. Tap to give it up' : 'Become the monarch'}
+              className={`flex items-center justify-center rounded-lg px-3 py-[1.6cqh] ${
+                game.monarchSeat === seat ? 'bg-brass text-felt' : 'bg-felt-3 text-bone/70'
+              }`}
+            >
+              <Crown size="1.3em" />
+            </button>
             <TwoTap
               label="Win"
               className="bg-brass/20 text-brass"

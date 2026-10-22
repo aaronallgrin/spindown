@@ -164,7 +164,7 @@ export default function SpinDie({
         </span>
       </button>
       {hint && (
-        <span className="pointer-events-none absolute top-full -mt-1 whitespace-nowrap rounded-full bg-black/70 px-2.5 py-1 text-xs text-bone/80">
+        <span className="pointer-events-none absolute top-full z-10 -mt-1 whitespace-nowrap rounded-full bg-black/85 px-2.5 py-1 text-xs text-bone/90 shadow-lg">
           {hint}
         </span>
       )}

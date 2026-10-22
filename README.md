@@ -3,7 +3,8 @@
 A Magic: The Gathering life counter for one shared phone, built for 4-player Commander and fine for 2–6 players and other formats. Every finished game is saved with who went first, turn of each elimination and how it happened, commanders, color identity and bracket, so the group can look at stats later.
 
 ## What it tracks
-- Life, poison, commander damage per opposing commander (partners counted separately), monarch
+- Life, poison, commander damage per opposing commander (partners counted separately), monarch (crown button in Counters)
+- Poison, the biggest commander damage and the monarch's crown show on each panel; a panel one hit from lethal pulses red
 - Counters screen also sets a life total or gains/loses an amount; tap anywhere else to back out
 - Center d20: shows the round; tap to pass the turn clockwise, hold for the menu (undo, end game, leave, discard)
 - First player: once everyone's seated, tap a seat, tap again to confirm (tapping the die rolls a plain d20 if no one has dice)
