@@ -1,11 +1,13 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useNavigate } from '../nav';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { queueDelete, syncNow } from '../sync';
 import ConfirmBtn from '../components/ConfirmBtn';
 import TrophyList from '../components/Trophies';
 import { eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
-import { BracketTag, Page, Pips, causeLabel, fmtDate } from '../ui';
+import { BracketTag, Page, Pips, causeLabel, fmtDate, gameVT } from '../ui';
+import { Crown } from '../components/icons';
 import CardName from '../components/CardName';
 
 export default function GameDetail() {
@@ -30,7 +32,7 @@ export default function GameDetail() {
   };
 
   return (
-    <Page title={g.winnerName ? `${g.winnerName} won` : 'Draw'} back="/history">
+    <Page title={g.winnerName ? `${g.winnerName} won` : 'Draw'} back="/history" titleVT={gameVT(g.id)}>
       <p className="mb-5 text-dim">
         {fmtDate(g.startedAt)}, {g.rounds ? `${g.rounds} ${g.rounds === 1 ? 'round' : 'rounds'}, ` : ''}
         {g.imported ? 'imported from the old spreadsheet' : `${g.durationMin} min`}
@@ -42,6 +44,11 @@ export default function GameDetail() {
             <div className="flex items-center gap-2">
               <Pips colors={p.colors} />
               <span className="text-lg font-semibold">{p.name}</span>
+              {p.wasMonarchAtEnd && (
+                <span className="text-brass" title="Monarch at the end" aria-label="Monarch at the end">
+                  <Crown size={16} />
+                </span>
+              )}
               {p.turnOrder > 0 && <span className="ml-auto text-sm text-dim">went {ordinal(p.turnOrder)}</span>}
             </div>
             <div className="mt-0.5 text-bone/80">
@@ -67,15 +74,28 @@ export default function GameDetail() {
               ) : (
                 <Stat k="Seat" v={String(p.seat + 1)} />
               )}
-              {!g.imported && (
-                <>
-                  <Stat k="Final life" v={String(p.finalLife)} />
-                  <Stat k="Poison" v={String(p.finalPoison)} />
-                  {g.format === 'commander' && <Stat k="Cmdr damage taken" v={String(p.cmdrDamageTaken)} />}
-                </>
-              )}
-              {g.config.extraCounter && p.finalExtra != null && <Stat k={g.config.extraCounter} v={String(p.finalExtra)} />}
             </dl>
+            {/* the end-of-game numbers sit in one row of small tiles */}
+            {(() => {
+              const nums: [string, number][] = [];
+              if (!g.imported) {
+                nums.push(['Life', p.finalLife], ['Poison', p.finalPoison]);
+                if (g.format === 'commander') nums.push(['Cmdr dmg', p.cmdrDamageTaken]);
+              }
+              const extra = g.config.extraCounter;
+              if (extra && p.finalExtra != null) nums.push([extra === '*' ? '* Misplays' : extra, p.finalExtra]);
+              if (!nums.length) return null;
+              return (
+                <dl className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${nums.length}, minmax(0, 1fr))` }}>
+                  {nums.map(([k, v]) => (
+                    <div key={k} className="flex flex-col-reverse rounded-lg bg-white/[.04] px-2 py-1.5 text-center">
+                      <dt className="truncate text-[11px] text-dim">{k}</dt>
+                      <dd className="font-cond text-xl font-bold leading-tight tabular-nums">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              );
+            })()}
           </div>
         ))}
       </div>

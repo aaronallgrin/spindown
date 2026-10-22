@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../nav';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import {
@@ -55,6 +55,12 @@ export default function Stats() {
     [all],
   );
   const games = useMemo(() => applyFilters(all ?? [], f), [all, f]);
+  // commander art saved with each game, so the win-rate list can show it without going online
+  const art = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const g of all ?? []) for (const p of g.config?.players ?? []) if (p.commander?.artCrop) m.set(p.commander.name, p.commander.artCrop);
+    return m;
+  }, [all]);
   const s = summary(games);
   const fair = games.length ? games.reduce((a, g) => a + 1 / g.playerCount, 0) / games.length : 0;
   const forPlayer = f.player === 'all' ? games : games.map((g) => ({ ...g, players: g.players.filter((p) => p.name === f.player) }));
@@ -146,6 +152,7 @@ export default function Stats() {
                   sub={r.extra!.pilots as string}
                   pips
                   label={isCmdr ? <CardNames text={r.label} /> : undefined}
+                  thumb={isCmdr ? art.get(r.label.split(' + ')[0]) : undefined}
                 />
               ))}
           </Section>
@@ -261,9 +268,35 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 }
 
 /** one ranked row: label, then a win-rate bar with the fair-share mark */
-function RateRow({ row, fair, sub, label, pips }: { row: Row; fair: number; sub?: string; label?: ReactNode; pips?: boolean }) {
+function RateRow({
+  row,
+  fair,
+  sub,
+  label,
+  pips,
+  thumb,
+}: {
+  row: Row;
+  fair: number;
+  sub?: string;
+  label?: ReactNode;
+  pips?: boolean;
+  /** commander art crop, when the game saved one */
+  thumb?: string;
+}) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg px-2 py-2">
+    <div
+      className={`grid items-center gap-x-3 rounded-lg px-2 py-2 ${
+        thumb ? 'grid-cols-[auto_minmax(0,1fr)_auto]' : 'grid-cols-[minmax(0,1fr)_auto]'
+      }`}
+    >
+      {thumb && (
+        <div
+          className="h-10 w-10 shrink-0 rounded-lg bg-felt-3 bg-cover bg-center ring-1 ring-white/10"
+          style={{ backgroundImage: `url("${thumb}")` }}
+          aria-hidden
+        />
+      )}
       <div className="min-w-0">
         <div className="flex items-center gap-2 truncate font-semibold">
           {pips && row.colors && <Pips colors={row.colors} size={9} />}
@@ -277,7 +310,7 @@ function RateRow({ row, fair, sub, label, pips }: { row: Row; fair: number; sub?
           {row.wins}/{row.games}
         </span>
       </div>
-      <div className="relative col-span-2 mt-1.5 h-1.5 rounded-full bg-felt-3" aria-hidden>
+      <div className={`relative mt-1.5 h-1.5 rounded-full bg-felt-3 ${thumb ? 'col-span-3' : 'col-span-2'}`} aria-hidden>
         <div className="h-full rounded-full bg-brass" style={{ width: `${Math.max(row.rate * 100, row.rate ? 2 : 0)}%` }} />
         {fair > 0 && <div className="absolute -top-1 h-3.5 w-0.5 rounded bg-bone/60" style={{ left: `${fair * 100}%` }} />}
       </div>

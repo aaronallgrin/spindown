@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../nav';
 import { BRACKETS } from '../types';
 import { Btn, Page } from '../ui';
 import { FORMATS, StatusChip, formatLine } from '../components/PollBits';

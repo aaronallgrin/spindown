@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { useNavigate } from '../nav';
 import { alive, seated, toRecord, type Action } from '../game';
 import TrophyList from '../components/Trophies';
 import type { LiveGame } from '../types';

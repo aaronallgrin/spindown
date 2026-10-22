@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from './nav';
 import { BRACKETS as BRACKET_LIST, MANA, type Mana } from './types';
 
 export const manaVar: Record<Mana | 'C', string> = {
@@ -110,7 +110,23 @@ export function Btn({ variant = 'quiet', className = '', ...p }: BtnProps) {
   return <button {...p} className={`rounded-xl px-4 py-2.5 transition active:scale-[.98] disabled:opacity-40 ${v} ${className}`} />;
 }
 
-export function Page({ title, back = '/', children, action }: { title: string; back?: string; children: ReactNode; action?: ReactNode }) {
+/** view-transition-name for a game, shared by its History row and its detail title */
+export const gameVT = (id: string) => `game-${id.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+
+export function Page({
+  title,
+  back = '/',
+  children,
+  action,
+  titleVT,
+}: {
+  title: string;
+  back?: string;
+  children: ReactNode;
+  action?: ReactNode;
+  /** view-transition-name for the title, so it glides from the row that opened it */
+  titleVT?: string;
+}) {
   return (
     <div className="mx-auto min-h-full max-w-2xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-30 -mx-4 mb-4 flex items-center gap-3 bg-felt/80 px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-md">
@@ -123,7 +139,9 @@ export function Page({ title, back = '/', children, action }: { title: string; b
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </Link>
-        <h1 className="flex-1 font-cond text-3xl font-bold tracking-wide">{title}</h1>
+        <h1 className="flex-1 font-cond text-3xl font-bold tracking-wide" style={titleVT ? { viewTransitionName: titleVT } : undefined}>
+          {title}
+        </h1>
         {action}
       </header>
       {children}

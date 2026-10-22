@@ -120,7 +120,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
     <div className="seat" style={{ gridArea: area, zIndex: keypad || panel ? 25 : undefined }}>
       <div className={`face r${rot}`}>
         <div className="face-inner overflow-hidden" style={{ background: bg ?? '#111' }}>
-          {art && <div className="art" style={{ backgroundImage: `url(${art})` }} />}
+          {art && <div className="art" style={{ backgroundImage: `url("${art}")` }} />}
           <div
             className="absolute inset-0"
             style={{
