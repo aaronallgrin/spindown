@@ -5,7 +5,7 @@ import { GROUP_CLOUD } from './cloud';
 /**
  * Two-way sync of saved games with a Supabase table (see the setup SQL in README).
  * The phone keeps working offline; sync runs when it can.
- * The project URL and key are entered on the device, never committed.
+ * The group's connection is built in (see cloud.ts); deletes are soft (deleted = true).
  */
 
 const CFG = 'spindown.sync';
@@ -77,11 +77,29 @@ export async function testConnection(c: SyncConfig): Promise<string | null> {
   }
 }
 
-export function queueDelete(id: string) {
+export function pendingDeletes(): string[] {
   try {
-    const list: string[] = JSON.parse(localStorage.getItem(PENDING_DELETES) || '[]');
-    if (!list.includes(id)) list.push(id);
-    localStorage.setItem(PENDING_DELETES, JSON.stringify(list));
+    const list = JSON.parse(localStorage.getItem(PENDING_DELETES) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+export function queueDelete(id: string) {
+  const list = pendingDeletes();
+  if (list.includes(id)) return;
+  try {
+    localStorage.setItem(PENDING_DELETES, JSON.stringify([...list, id]));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Drop the ids that reached the cloud, keeping any queued since. */
+export function clearDeletes(sent: string[]) {
+  try {
+    localStorage.setItem(PENDING_DELETES, JSON.stringify(pendingDeletes().filter((d) => !sent.includes(d))));
   } catch {
     /* ignore */
   }
@@ -110,7 +128,7 @@ export function syncNow(): Promise<void> {
       }
 
       // push deletions
-      const dels: string[] = JSON.parse(localStorage.getItem(PENDING_DELETES) || '[]');
+      const dels = pendingDeletes();
       if (dels.length) {
         const r = await fetch(`${base(c)}?id=in.(${dels.map((d) => `"${d}"`).join(',')})`, {
           method: 'PATCH',
@@ -118,7 +136,8 @@ export function syncNow(): Promise<void> {
           body: JSON.stringify({ deleted: true, updated_at: new Date().toISOString() }),
         });
         if (!r.ok) throw new Error(`Delete failed (${r.status})`);
-        localStorage.setItem(PENDING_DELETES, '[]');
+        // only clear what was sent: a game deleted while this request was out stays queued
+        clearDeletes(dels);
       }
 
       // pull everything changed since last time; if this phone has no games (new phone, or the

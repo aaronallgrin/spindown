@@ -32,9 +32,16 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,json,wasm}'],
+        // the SQL engine (wasm) is only for Query, so it's cached the first time Query opens
+        // instead of on install; everything else, rules included, works offline from the start
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.endsWith('.wasm'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'sql-engine', expiration: { maxEntries: 2 } },
+          },
           {
             urlPattern: /^https:\/\/cards\.scryfall\.io\//,
             handler: 'CacheFirst',

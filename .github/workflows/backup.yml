@@ -1,0 +1,28 @@
+name: Nightly backup
+
+# Saves a copy of every game and poll each night, and keeps the free Supabase project
+# from pausing for inactivity. Download it from the run's Artifacts; spindown-backup.json
+# goes back in with History, Import backup.
+
+on:
+  schedule:
+    - cron: '17 8 * * *' # about 4am Philadelphia time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/backup.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spindown-backup-${{ github.run_number }}
+          path: backup/
+          retention-days: 90

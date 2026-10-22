@@ -333,7 +333,7 @@ export function toRecord(g: LiveGame): GameRecord {
       finalPoison: p.poison,
       cmdrDamageTaken: Object.values(p.cmdr).reduce((a, b) => a + b, 0),
       finalExtra: g.config.extraCounter ? (p.extra ?? 0) : undefined,
-      wasMonarchAtEnd: false,
+      wasMonarchAtEnd: g.monarchSeat === p.seat,
     };
   });
   const winner = players.find((p) => p.result === 'win');
