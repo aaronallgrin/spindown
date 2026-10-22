@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from '../nav';
 
 /** Stats and the game list are one screen with two tabs. */
 export default function StatsTabs({ active }: { active: 'stats' | 'games' }) {

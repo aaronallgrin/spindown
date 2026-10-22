@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../nav';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, exportAll, importAll } from '../db';
-import { Btn, Page, Pips, fmtDate } from '../ui';
+import { Btn, Page, Pips, fmtDate, gameVT } from '../ui';
 import StatsTabs from '../components/StatsTabs';
 
 const fmtLabel = { commander: 'Commander', constructed: 'Constructed', other: 'Other' };
@@ -58,7 +58,9 @@ export default function History() {
         {games?.map((g) => (
           <Link key={g.id} to={`/history/${g.id}`} className="rounded-xl bg-felt-2 px-4 py-3 hover:bg-felt-3">
             <div className="mb-1 flex items-baseline justify-between gap-2">
-              <span className="font-semibold">{g.winnerName ? `${g.winnerName} won` : 'Draw'}</span>
+              <span className="font-semibold" style={{ viewTransitionName: gameVT(g.id) }}>
+                {g.winnerName ? `${g.winnerName} won` : 'Draw'}
+              </span>
               <span className="shrink-0 text-sm text-dim">{fmtDate(g.startedAt)}</span>
             </div>
             <div className="mb-2 text-sm text-dim">

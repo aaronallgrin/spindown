@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../nav';
 import { useStore } from '../store';
 import { makeConfig } from '../game';
 import { defaultLayout, layoutsFor } from '../layouts';

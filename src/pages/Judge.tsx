@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from '../nav';
 import { loadRules, parentOf, processTerm, type Hit, type RulesDb } from '../rules';
 import { autocompleteCards, getRulings, type CardRulings } from '../scryfall';
 import { Page, Segmented } from '../ui';

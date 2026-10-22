@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../nav';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useStore } from '../store';
@@ -73,15 +73,9 @@ export default function Home() {
           ))}
         </nav>
 
-        <footer className="mt-auto pt-14 text-center text-[11px] leading-relaxed text-dim/80">
-          <p className="mb-1 font-medium text-dim">Special thanks to</p>
-          <p>Rachiepie, Partner</p>
-          <p>TJ Scales, SVP and Director of Quality Improvement</p>
-          <p>Drew Garza, Advisor</p>
-          <p>Ben Perez, Consulting Senior Software Engineer</p>
-          <p>Vikeo</p>
-          <p>My local pod</p>
-          <p>Queen &amp; Rooke</p>
+        <footer className="mt-auto flex items-center justify-center gap-1 pt-12 text-xs text-dim">
+          <About />
+          <span aria-hidden>·</span>
           <VersionButton />
         </footer>
       </div>
@@ -189,6 +183,57 @@ async function fetchUpdate() {
   }
 }
 
+const THANKS = [
+  'Rachiepie, Partner',
+  'TJ Scales, SVP and Director of Quality Improvement',
+  'Drew Garza, Advisor',
+  'Ben Perez, Consulting Senior Software Engineer',
+  'Vikeo',
+  'My local pod',
+  'Queen & Rooke',
+];
+
+/** Credits live in a sheet instead of at the bottom of Home. */
+function About() {
+  const sheet = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <button type="button" onClick={() => sheet.current?.showModal()} className="rounded-md px-2 py-1 active:text-brass">
+        About &amp; thanks
+      </button>
+      <dialog
+        ref={sheet}
+        className="sheet"
+        aria-labelledby="about-title"
+        // a tap on the dimmed backdrop closes it
+        onClick={(e) => e.target === sheet.current && sheet.current.close()}
+      >
+        <div className="px-6 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-center">
+          <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" aria-hidden />
+          <h2 id="about-title" className="font-cond text-3xl font-bold">
+            <span className="text-bone">Spin</span>
+            <span className="ml-1 rounded-lg bg-brass px-1.5 text-felt">down</span>
+          </h2>
+          <p className="mt-1 text-sm text-dim">Created by aaronallgrin</p>
+          <p className="mt-6 mb-2 text-xs font-semibold tracking-wider text-dim uppercase">Special thanks</p>
+          <ul className="flex flex-col gap-1.5 text-[15px] text-bone/90">
+            {THANKS.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => sheet.current?.close()}
+            className="mt-7 w-full rounded-xl bg-white/[.06] py-3 font-semibold transition active:scale-[.98]"
+          >
+            Close
+          </button>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
 /** The version line. Tap it to check for a newer build and refresh. */
 function VersionButton() {
   const [busy, setBusy] = useState(false);
@@ -202,7 +247,7 @@ function VersionButton() {
         window.location.reload();
       }}
       aria-label="Refresh the app"
-      className="mt-4 rounded-md px-2 py-1 text-xs text-dim active:text-brass"
+      className="rounded-md px-2 py-1 active:text-brass"
     >
       {busy ? 'Refreshing…' : `Version: ${__BUILD_DATE__}`}
     </button>

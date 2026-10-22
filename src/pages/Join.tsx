@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { Link } from '../nav';
 import { builtInSync, decodeInvite, getSync, setSync, syncNow, testConnection } from '../sync';
 import { Page } from '../ui';
 
