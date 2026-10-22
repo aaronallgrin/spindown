@@ -15,12 +15,16 @@ A Magic: The Gathering life counter for one shared phone, built for 4-player Com
 ```
 npm install
 npm run dev
+npm test
 npm run build
 ```
+Pushes to main run lint and tests before deploying.
 
 Data lives on the device (IndexedDB). Use History, then Export backup to save a JSON copy.
 
-Cloud sync: run `supabase/games_updated_at.sql` once in the Supabase SQL Editor so game times come from the server clock, not each phone's.
+Cloud sync: run `supabase/games.sql`, then `supabase/games_updated_at.sql`, once in the Supabase SQL Editor. The first creates the games table (or tightens an existing one so the public key can't hard-delete games); the second makes game times come from the server clock, not each phone's.
+
+Backup: `.github/workflows/backup.yml` runs every night, saves every game and poll as a downloadable artifact (kept 90 days), and keeps the free Supabase project from pausing. To restore, download `spindown-backup.json` from a run and use History, then Import backup. Run it by hand from the Actions tab any time.
 
 ## Find a game
 Availability polls for the group, kept in the same Supabase project as cloud sync.
