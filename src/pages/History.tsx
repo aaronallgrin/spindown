@@ -18,7 +18,8 @@ export default function History() {
     a.href = URL.createObjectURL(blob);
     a.download = `spindown-games-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    URL.revokeObjectURL(a.href);
+    // revoking right away can cancel the download in iOS Safari
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
   };
 
   const doImport = async (f: File) => {
