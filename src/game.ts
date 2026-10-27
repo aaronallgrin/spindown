@@ -1,4 +1,5 @@
 import type {
+  DandanMark,
   EventKind,
   Format,
   GameConfig,
@@ -78,6 +79,7 @@ export type Action =
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
   | { t: 'extra'; seat: number; d: number }
+  | { t: 'mark'; seat: number; kind: DandanMark; d: 1 | -1 }
   | { t: 'round'; d: 1 | -1 }
   | { t: 'out'; seat: number; cause: OutCause }
   | { t: 'win'; seat: number }
@@ -235,6 +237,13 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const real = (n.players[a.seat].extra ?? 0) - (g.players[a.seat].extra ?? 0);
       if (!real) return g;
       return { ...n, events: log(g, { kind: 'extra', seat: a.seat, delta: real }) };
+    }
+    case 'mark': {
+      if (g.phase !== 'playing') return g;
+      if (a.d > 0) return { ...g, events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: a.kind }] };
+      // taking one back removes this player's latest of that kind
+      const i = g.events.findLastIndex((e) => e.kind === a.kind && e.seat === a.seat);
+      return i < 0 ? g : { ...g, events: g.events.filter((_, j) => j !== i) };
     }
     case 'round': {
       if (g.phase !== 'playing') return g;

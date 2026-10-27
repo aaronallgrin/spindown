@@ -143,3 +143,19 @@ describe('undo history', () => {
     expect(unpackUndo(packUndo([a]), b)).toEqual([]);
   });
 });
+
+describe('dandan events', () => {
+  it('logs a mark against the player and takes back only their latest', () => {
+    const g = run(
+      started(0),
+      { t: 'mark', seat: 0, kind: 'dandanKill', d: 1 },
+      { t: 'mark', seat: 1, kind: 'dandanKill', d: 1 },
+      { t: 'mark', seat: 0, kind: 'diminishing', d: 1 },
+      { t: 'mark', seat: 0, kind: 'dandanKill', d: -1 },
+      { t: 'mark', seat: 2, kind: 'dandanBlock', d: -1 },
+    );
+    const marks = g.events.filter((e) => e.kind !== 'first').map((e) => `${e.seat}:${e.kind}`);
+    expect(marks).toEqual(['1:dandanKill', '0:diminishing']);
+    expect(toRecord(g).events.some((e) => e.kind === 'diminishing')).toBe(true);
+  });
+});

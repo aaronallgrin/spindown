@@ -6,14 +6,16 @@ import { queueDelete, syncNow } from '../sync';
 import ConfirmBtn from '../components/ConfirmBtn';
 import TrophyList from '../components/Trophies';
 import { eggsFound, fmtSecs, roundSeconds, trophies } from '../eggs';
-import { BracketTag, Page, Pips, causeLabel, fmtDate, gameVT } from '../ui';
+import { BracketTag, Btn, Page, Pips, causeLabel, fmtDate, gameVT } from '../ui';
 import { Crown } from '../components/icons';
 import CardName from '../components/CardName';
+import { useStore } from '../store';
 
 export default function GameDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const g = useLiveQuery(() => db.games.get(id ?? ''), [id]);
+  const { game: live, start } = useStore();
 
   if (g === undefined) return <Page title="Game" back="/history">{null}</Page>;
   if (!g) return <Page title="Game not found" back="/history"><p className="text-dim">This game was deleted.</p></Page>;
@@ -133,7 +135,20 @@ export default function GameDetail() {
         );
       })()}
 
-      <ConfirmBtn variant="quiet" className="mt-8 w-full" onConfirm={remove} confirmLabel="Tap again to delete this game">
+      {!g.imported && !live && (
+        <Btn
+          variant="primary"
+          className="mt-8 w-full"
+          onClick={() => {
+            start(g.config);
+            nav('/play');
+          }}
+        >
+          Rematch, same players and decks
+        </Btn>
+      )}
+
+      <ConfirmBtn variant="quiet" className="mt-3 w-full" onConfirm={remove} confirmLabel="Tap again to delete this game">
         Delete game
       </ConfirmBtn>
     </Page>

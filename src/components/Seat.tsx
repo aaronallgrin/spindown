@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CMDR_LETHAL, POISON_LETHAL, lethalCause, type Action } from '../game';
 import type { Rot } from '../layouts';
-import type { LiveGame } from '../types';
+import { DANDAN_MARKS, isDandan, type LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
 import { Crown, Poison, Skull, Sword } from './icons';
 import { usePress } from './usePress';
 import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
 import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
+
+export type SheetKind = 'panel' | 'keypad' | 'events';
 
 interface Props {
   game: LiveGame;
@@ -16,9 +18,9 @@ interface Props {
   area: string;
   headerPad?: { side: 'left' | 'right' | 'both'; px: number } | null;
   onEdit: () => void;
-  /** this player's open overlay, if any (held by the table so a tap elsewhere closes it) */
-  sheet: 'panel' | 'keypad' | null;
-  setSheet: (s: 'panel' | 'keypad' | null) => void;
+  /** this player's open full-screen sheet, if any (the table draws it, see SeatSheet) */
+  sheet: SheetKind | null;
+  setSheet: (s: SheetKind | null) => void;
   dispatch: (a: Action) => void;
   /** show the new-player hints on this panel */
   coach?: boolean;
@@ -27,7 +29,7 @@ interface Props {
 export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, setSheet, dispatch, coach }: Props) {
   const p = game.players[seat];
   const setup = game.config.players[seat];
-  const panel = sheet === 'panel';
+  const panel = sheet != null;
   const delta = useDelta(p.life);
   const isCmdr = game.config.format === 'commander';
   const lethal = game.phase === 'playing' ? lethalCause(game, p) : null;
@@ -35,9 +37,10 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
   const art = setup.commander?.artCrop;
   const colors = sortMana(setup.colors);
   const extraName = game.config.extraCounter?.trim();
-  const keypad = sheet === 'keypad';
+  const dandan = isDandan(game.config);
+  const marks = dandan ? game.events.filter((e) => e.seat === seat && DANDAN_MARKS.some((m) => m.kind === e.kind)).length : 0;
   // hints fade once this player has used their panel
-  const used = useUsed(coach, `${p.life}|${p.poison}|${JSON.stringify(p.cmdr)}|${keypad || panel}`);
+  const used = useUsed(coach, `${p.life}|${p.poison}|${JSON.stringify(p.cmdr)}|${panel}`);
   const showCoach = coach && !used && !p.out && !lethal;
   const monarch = game.monarchSeat === seat;
   // one hit from lethal: the edge of the panel pulses red
@@ -116,8 +119,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
         .join(', ')})`;
 
   return (
-    // an open keypad or counter panel sits above the center die
-    <div className="seat" style={{ gridArea: area, zIndex: keypad || panel ? 25 : undefined }}>
+    <div className="seat" style={{ gridArea: area }}>
       <div className={`face r${rot}`}>
         <div className="face-inner overflow-hidden" style={{ background: bg ?? '#111' }}>
           {art && <div className="art" style={{ backgroundImage: `url("${art}")` }} />}
@@ -203,7 +205,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
           <div className="absolute inset-x-0 bottom-[5px] flex items-center gap-[2cqw] px-[3cqw] pb-[2.5cqh]" style={{ fontSize: 'clamp(12px, 6.4cqh, 20px)' }}>
             <button
               onClick={() => setSheet('panel')}
-              className="relative flex items-center gap-[0.7em] rounded-full bg-black/60 px-[0.9em] py-[0.35em] transition active:scale-95"
+              className="relative flex min-h-[2.6em] items-center gap-[0.7em] rounded-full bg-black/60 px-[1.1em] py-[0.55em] transition active:scale-95"
               aria-label={[
                 'Counters',
                 p.poison ? `${p.poison} poison` : '',
@@ -232,12 +234,22 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                 <span className="text-[0.85em] text-bone/80">Counters</span>
               )}
             </button>
+            {dandan && (
+              <button
+                onClick={() => setSheet('events')}
+                className="flex min-h-[2.6em] items-center gap-[0.5em] rounded-full bg-black/60 px-[1.1em] py-[0.55em] transition active:scale-95"
+                aria-label={`Dandân events, ${marks} logged`}
+              >
+                <span className="text-[0.85em] text-bone/80">Events</span>
+                {marks > 0 && <Badge tone="cmdr">{marks}</Badge>}
+              </button>
+            )}
             <div className="flex-1" />
             {extraName && (
               <button
                 {...star}
                 aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to add, hold to take one back`}
-                className={`flex h-[2.1em] min-w-[2.1em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
+                className={`flex h-[2.6em] min-w-[2.6em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
                   (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/60 text-bone/80'
                 }`}
               >
@@ -250,21 +262,6 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
           </div>
 
           {showCoach && <Coach isCmdr={isCmdr} />}
-
-          {keypad && (
-            <Keypad
-              life={p.life}
-              onClose={() => setSheet('panel')}
-              onApply={(value) => {
-                dispatch({ t: 'setLife', seat, value });
-                setSheet(null);
-              }}
-            />
-          )}
-
-          {panel && (
-            <CounterPanel game={game} seat={seat} dispatch={dispatch} close={() => setSheet(null)} openLife={() => setSheet('keypad')} />
-          )}
 
           {game.phase === 'seating' && (
             <button
@@ -394,6 +391,84 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
   );
 }
 
+/** A player's counters, life keypad or Dandân events, filling the whole table and facing that player. */
+export function SeatSheet({
+  game,
+  seat,
+  rot,
+  kind,
+  setSheet,
+  dispatch,
+}: {
+  game: LiveGame;
+  seat: number;
+  rot: Rot;
+  kind: SheetKind;
+  setSheet: (s: SheetKind | null) => void;
+  dispatch: (a: Action) => void;
+}) {
+  const close = () => setSheet(null);
+  return (
+    // inline, since the unlayered .seat rule would beat Tailwind's position classes
+    <div className="seat" style={{ position: 'absolute', inset: 0, zIndex: 35 }}>
+      <div className={`face r${rot}`}>
+        <div className="face-inner flex flex-col bg-felt">
+          <div className="flex items-center gap-3 px-[2.5cqh] pt-[2cqh]" style={{ fontSize: 'clamp(13px, 3.2cqh, 20px)' }}>
+            <button
+              onClick={() => (kind === 'keypad' ? setSheet('panel') : close())}
+              className="flex min-h-[2.6em] items-center rounded-full bg-felt-3 px-[1.1em] font-semibold text-bone/90 active:bg-line"
+            >
+              ‹ Back
+            </button>
+            <span className="min-w-0 truncate font-cond text-[1.3em] font-bold">{game.config.players[seat].name}</span>
+          </div>
+          <div className="relative min-h-0 flex-1">
+            {kind === 'keypad' ? (
+              <Keypad
+                life={game.players[seat].life}
+                onClose={() => setSheet('panel')}
+                onApply={(value) => {
+                  dispatch({ t: 'setLife', seat, value });
+                  close();
+                }}
+              />
+            ) : kind === 'events' ? (
+              <EventsPanel game={game} seat={seat} dispatch={dispatch} close={close} />
+            ) : (
+              <CounterPanel game={game} seat={seat} dispatch={dispatch} close={close} openLife={() => setSheet('keypad')} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Dandân's three game-deciding plays, counted for this player. */
+function EventsPanel({ game, seat, dispatch, close }: { game: LiveGame; seat: number; dispatch: (a: Action) => void; close: () => void }) {
+  return (
+    <div className="absolute inset-0 flex flex-col p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.2cqh, 20px)' }}>
+      <div className="grid min-h-0 flex-1 grid-rows-3 gap-[1.5cqh]">
+        {DANDAN_MARKS.map((m) => (
+          <Tile
+            key={m.kind}
+            label={m.label}
+            who={m.who}
+            value={game.events.filter((e) => e.kind === m.kind && e.seat === seat).length}
+            lethal={false}
+            stripe={[manaVar.U]}
+            onPlus={() => dispatch({ t: 'mark', seat, kind: m.kind, d: 1 })}
+            onMinus={() => dispatch({ t: 'mark', seat, kind: m.kind, d: -1 })}
+          />
+        ))}
+      </div>
+      <button className="mt-[2cqh] rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
+        Done
+      </button>
+    </div>
+  );
+}
+
 /** true once `sig` changes while `on`; resets when `on` goes off */
 function useUsed(on: boolean | undefined, sig: string) {
   const start = useRef<string | null>(null);
@@ -507,7 +582,7 @@ function Keypad({ life, onApply, onClose }: { life: number; onApply: (v: number)
   };
   const key = 'rounded-lg bg-felt-3 font-cond font-bold active:bg-line';
   return (
-    <div className="absolute inset-0 z-20 flex flex-col gap-[1.5cqh] bg-felt/97 p-[2.5cqh]" style={{ fontSize: 'clamp(11px, 6cqh, 20px)' }}>
+    <div className="absolute inset-0 z-20 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.6cqh, 22px)' }}>
       <div className="flex items-center gap-[1.2cqw]">
         {(['set', 'gain', 'lose'] as const).map((m) => (
           <button
@@ -593,7 +668,7 @@ function CounterPanel({
   const cols = tiles <= 2 ? tiles : tiles <= 6 ? 3 : 4;
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col bg-felt/95 p-[2.5cqh]" style={{ fontSize: 'clamp(10px, 5cqh, 16px)' }}>
+    <div className="absolute inset-0 z-10 flex flex-col p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.2cqh, 20px)' }}>
       <div className="grid flex-1 gap-[1.5cqh]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         <button
           onClick={openLife}
@@ -632,9 +707,9 @@ function CounterPanel({
           );
         })}
       </div>
-      <div className="mt-[2cqh] flex gap-2">
+      <div className="mt-[2cqh] flex flex-col gap-2">
         {!p.out && game.phase === 'playing' && (
-          <>
+          <div className="flex gap-2 [&>*]:flex-1">
             <button
               onClick={() => (buzz(), dispatch({ t: 'monarch', seat }))}
               aria-pressed={game.monarchSeat === seat}
@@ -669,9 +744,9 @@ function CounterPanel({
                 close();
               }}
             />
-          </>
+          </div>
         )}
-        <button className="flex-1 rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
+        <button className="rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
           Done
         </button>
       </div>

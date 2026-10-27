@@ -99,7 +99,16 @@ export interface LivePlayer {
   lethalDismissed?: boolean;
 }
 
-export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'win' | 'revive' | 'first' | 'egg';
+/** the three plays that decide a Dandân game, logged against the player who made them */
+export type DandanMark = 'dandanKill' | 'dandanBlock' | 'diminishing';
+export const DANDAN_MARKS: { kind: DandanMark; label: string; who: string }[] = [
+  { kind: 'dandanKill', label: 'Killed a Dandân', who: 'by this player' },
+  { kind: 'dandanBlock', label: 'Dandân blocked Dandân', who: "this player's Dandân blocked" },
+  { kind: 'diminishing', label: 'Diminishing Returns', who: 'cast by this player' },
+];
+export const isDandan = (c: GameConfig) => c.format === 'other' && c.subFormat === 'Dandân';
+
+export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'win' | 'revive' | 'first' | 'egg' | DandanMark;
 
 export interface GameEvent {
   at: number;
