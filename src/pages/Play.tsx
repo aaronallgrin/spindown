@@ -10,7 +10,7 @@ import { setTips, tipsFor } from '../components/tips';
 import { HATCH, THREAT, TIM_CLEAN, ZENKAI, fmtSecs, rageQuit, threatSeat, timCleanWin, trophies } from '../eggs';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
-import Seat from '../components/Seat';
+import Seat, { SeatSheet, type SheetKind } from '../components/Seat';
 import SpinDie from '../components/SpinDie';
 import ConfirmBtn from '../components/ConfirmBtn';
 import { Btn, Pips } from '../ui';
@@ -64,7 +64,7 @@ function useWakeLock() {
   }, []);
 }
 
-type Sheet = { seat: number; kind: 'panel' | 'keypad' };
+type Sheet = { seat: number; kind: SheetKind };
 
 export default function Play() {
   const { game, dispatch, undo, canUndo, saveAndClose, discard, start } = useStore();
@@ -73,7 +73,7 @@ export default function Play() {
   const vp = useBox(areaRef, !!game);
   const [menu, setMenu] = useState<null | 'main' | 'end'>(null);
   const [editing, setEditing] = useState<number | null>(null);
-  // one player's counters or life keypad open at a time; tapping anywhere else just closes it
+  // one player's counters, life keypad or Dandân events open at a time, over the whole table
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [banner, setBanner] = useState(false);
   // tips show for the first few games on this phone; the menu switch overrides that
@@ -155,8 +155,14 @@ export default function Play() {
         ))}
 
         {sheet && (
-          // swallows the tap that closes an open panel, so it can't also change another player's life
-          <div className="absolute inset-0 z-[24]" onClick={() => setSheet(null)} aria-hidden />
+          <SeatSheet
+            game={game}
+            seat={sheet.seat}
+            rot={layout.rot[sheet.seat]}
+            kind={sheet.kind}
+            setSheet={(kind) => setSheet(kind ? { seat: sheet.seat, kind } : null)}
+            dispatch={dispatch}
+          />
         )}
 
         {banner && game.phase === 'choosingFirst' && (
@@ -234,10 +240,15 @@ export default function Play() {
                 </div>
               )}
               <div className="flex flex-col gap-2">
-                <Btn variant="primary" onClick={() => finish(false)}>
-                  Save game
-                </Btn>
-                <Btn onClick={() => finish(true)}>Save and rematch</Btn>
+                <div className="flex gap-2">
+                  <Btn variant="primary" className="flex-1" onClick={() => finish(true)}>
+                    Rematch
+                  </Btn>
+                  <Btn className="flex-1" onClick={() => finish(false)}>
+                    Save game
+                  </Btn>
+                </div>
+                <div className="-mt-1 text-center text-xs text-dim">Both save this game. Rematch keeps the same players and decks.</div>
                 <TakeBack game={game} dispatch={dispatch} />
               </div>
               {(() => {
