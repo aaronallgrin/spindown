@@ -10,6 +10,8 @@ import { BracketTag, Btn, Page, Pips, causeLabel, fmtDate, gameVT } from '../ui'
 import { Crown } from '../components/icons';
 import CardName from '../components/CardName';
 import { useStore } from '../store';
+import { recapText } from '../recap';
+import { useState } from 'react';
 
 export default function GameDetail() {
   const { id } = useParams();
@@ -135,10 +137,11 @@ export default function GameDetail() {
         );
       })()}
 
+      <ShareRecap text={recapText(g, `${location.origin}${location.pathname}`)} />
+
       {!g.imported && !live && (
         <Btn
-          variant="primary"
-          className="mt-8 w-full"
+          className="mt-3 w-full"
           onClick={() => {
             start(g.config);
             nav('/play');
@@ -152,6 +155,26 @@ export default function GameDetail() {
         Delete game
       </ConfirmBtn>
     </Page>
+  );
+}
+
+/** Send the game write-up to the group chat, or copy it where sharing isn't available. */
+function ShareRecap({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const share = async () => {
+    try {
+      if (navigator.share) return await navigator.share({ text });
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* closed the share sheet, or clipboard blocked */
+    }
+  };
+  return (
+    <Btn variant="primary" className="mt-8 w-full" onClick={share}>
+      {copied ? 'Recap copied, paste it in the chat' : 'Share recap'}
+    </Btn>
   );
 }
 

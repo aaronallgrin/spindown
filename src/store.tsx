@@ -109,6 +109,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const saveAndClose = useCallback(async () => {
     if (!game) return null;
     if (game.phase === 'over') {
+      // remembered for "Same table again" on Home
+      setLastConfig(game.config);
+      save(LAST_CONFIG, game.config);
       await db.games.put(toRecord(game));
       syncNow();
     }

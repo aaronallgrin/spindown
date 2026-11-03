@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from '../nav';
 import { useStore } from '../store';
-import { makeConfig } from '../game';
+import { makeConfig, quickName } from '../game';
 import { defaultLayout, layoutsFor } from '../layouts';
 import { SUB_FORMATS, type Format } from '../types';
 import ConfirmBtn from '../components/ConfirmBtn';
@@ -61,10 +61,13 @@ export default function NewGame() {
     }
   };
 
-  const begin = () => {
+  const begin = (quick = false) => {
     if (game) discard();
     const format: Format = prefs.kind === 'commander' ? 'commander' : prefs.other.format;
-    start(makeConfig(format, prefs.kind === 'commander' ? undefined : prefs.other.sub, prefs.players, prefs.layoutId));
+    const config = makeConfig(format, prefs.kind === 'commander' ? undefined : prefs.other.sub, prefs.players, prefs.layoutId);
+    // quick start: no names yet, everyone gets asked at the end
+    if (quick) config.players = config.players.map((p, i) => ({ ...p, name: quickName(i) }));
+    start(config);
     nav('/play');
   };
 
@@ -155,11 +158,21 @@ export default function NewGame() {
       <ConfirmBtn
         variant="primary"
         skip={!game}
-        onConfirm={begin}
+        onConfirm={() => begin()}
         confirmLabel="Tap again to drop the unfinished game"
         className="mt-5 w-full !rounded-2xl py-4 font-cond text-3xl font-bold shadow-[0_10px_30px_-10px_rgba(255,163,26,.6)]"
       >
         Start game
+      </ConfirmBtn>
+      <ConfirmBtn
+        variant="quiet"
+        skip={!game}
+        onConfirm={() => begin(true)}
+        confirmLabel="Tap again to drop the unfinished game"
+        className="mt-2 w-full !rounded-2xl py-3"
+      >
+        <span className="block font-semibold">Quick start</span>
+        <span className="block text-xs text-dim">Just count life. Add names at the end.</span>
       </ConfirmBtn>
     </section>
     </Page>

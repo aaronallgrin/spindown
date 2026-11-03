@@ -34,6 +34,11 @@ export function makeConfig(format: Format, subFormat: string | undefined, player
   };
 }
 
+/** Quick start seats everyone as "Player 1", "Player 2"…; real names go in before saving. */
+export const quickName = (seat: number) => `Player ${seat + 1}`;
+export const isQuickName = (name: string) => /^Player [1-6]$/.test(name.trim());
+export const needsNames = (c: GameConfig) => c.players.some((p) => isQuickName(p.name));
+
 export const seated = (g: LiveGame) => g.config.players.every((p) => p.name.trim());
 
 export function newGame(config: GameConfig): LiveGame {
@@ -210,7 +215,8 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       };
     }
     case 'seatInfo': {
-      if (g.phase !== 'seating' && g.phase !== 'choosingFirst') return g;
+      // 'over' too: a quick-start game gets its names and decks after the last hit
+      if (g.phase === 'playing') return g;
       const players = g.config.players.map((p, i) => (i === a.seat ? a.setup : p));
       return { ...g, config: { ...g.config, players } };
     }

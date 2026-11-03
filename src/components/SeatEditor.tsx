@@ -55,6 +55,13 @@ export default function SeatEditor({
       ? []
       : similarNames(typed, memory.names.filter((n) => !takenNames.some((t) => t.toLowerCase() === n.toLowerCase())));
   const asking = lookalikes.length > 0;
+  // one-tap names: people who've played before and aren't at the table, narrowed as you type
+  const regulars = known
+    ? []
+    : memory.names
+        .filter((n) => !takenNames.some((t) => t.toLowerCase() === n.toLowerCase()))
+        .filter((n) => n.toLowerCase().includes(typed.toLowerCase()))
+        .slice(0, 12);
 
   const save = () => {
     if (!name || dupe || asking) return;
@@ -115,23 +122,29 @@ export default function SeatEditor({
           </button>
         </div>
 
-        <datalist id="past-names">
-          {memory.names
-            .filter((n) => !takenNames.some((t) => t.toLowerCase() === n.toLowerCase()))
-            .map((n) => (
-              <option key={n} value={n} />
-            ))}
-        </datalist>
         <div>
           <input
             id="seat-name"
-            list="past-names"
             value={p.name}
             onChange={(e) => set({ name: e.target.value })}
             placeholder="Your name"
             autoComplete="off"
             className="w-full rounded-lg bg-felt-2 px-3 py-3 text-xl font-semibold placeholder:font-normal placeholder:text-dim"
           />
+          {regulars.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {regulars.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => set({ name: n })}
+                  className="rounded-full bg-white/[.08] px-3.5 py-2 font-semibold active:bg-brass active:text-felt"
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
           {dupe && <p className="mt-1 text-sm text-blood">Someone at the table already has that name.</p>}
           {asking && !dupe && (
             <div className="mt-2 rounded-lg border border-brass/40 bg-brass/10 p-3">

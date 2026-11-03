@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useNavigate } from '../nav';
-import { alive, seated, toRecord, type Action } from '../game';
+import { alive, isQuickName, needsNames, seated, toRecord, type Action } from '../game';
 import TrophyList from '../components/Trophies';
 import type { LiveGame } from '../types';
 import SeatEditor from '../components/SeatEditor';
@@ -66,6 +66,26 @@ function useWakeLock() {
 
 type Sheet = { seat: number; kind: SheetKind };
 
+const MENU_SEEN = 'spindown.menuSeen';
+
+/** true for a few seconds after each change during play, so a slip can be taken back in one tap */
+function useQuickUndo(game: LiveGame | null, canUndo: boolean) {
+  const [show, setShow] = useState(false);
+  const loaded = useRef(false);
+  useEffect(() => {
+    // not when the table first opens, only after a tap
+    if (!loaded.current) {
+      loaded.current = true;
+      return;
+    }
+    if (!canUndo || game?.phase !== 'playing') return setShow(false);
+    setShow(true);
+    const t = window.setTimeout(() => setShow(false), 5000);
+    return () => window.clearTimeout(t);
+  }, [game, canUndo]);
+  return show;
+}
+
 export default function Play() {
   const { game, dispatch, undo, canUndo, saveAndClose, discard, start } = useStore();
   const nav = useNavigate();
@@ -81,6 +101,18 @@ export default function Play() {
   const [tipsChoice, setTipsChoice] = useState<boolean | null>(null);
   const tipsOn = tipsChoice ?? autoTips;
   const tip = useRoundTip(game, tipsOn);
+  const quickUndo = useQuickUndo(game, canUndo);
+  // the d20 keeps saying "hold for menu" until someone on this phone has found the menu
+  const [menuSeen, setMenuSeen] = useState(() => localStorage.getItem(MENU_SEEN) === '1');
+  const openMenu = () => {
+    setMenu('main');
+    setMenuSeen(true);
+    try {
+      localStorage.setItem(MENU_SEEN, '1');
+    } catch {
+      /* ignore */
+    }
+  };
   useWakeLock();
   useTableLock();
   useOutNotes(game, dispatch);
@@ -180,7 +212,15 @@ export default function Play() {
             value={game.phase === 'playing' ? game.round : ''}
             size={d20Size}
             facing={facing}
-            hint={game.phase === 'playing' && !spunYet && !tip.open ? 'Tap for round 2 · hold for menu' : undefined}
+            hint={
+              game.phase !== 'playing' || tip.open
+                ? undefined
+                : !spunYet
+                  ? 'Tap for round 2 · hold for menu'
+                  : !menuSeen
+                    ? 'Hold for menu'
+                    : undefined
+            }
             label={
               game.phase === 'seating'
                 ? 'Game menu'
@@ -205,11 +245,25 @@ export default function Play() {
                 game.players.forEach((p) => toast(p.seat, HATCH.text));
               }
             }}
-            onTap={() => setMenu('main')}
-            onHold={() => setMenu('main')}
+            onTap={openMenu}
+            onHold={openMenu}
             spinnable={game.phase === 'playing'}
             dice={game.phase === 'choosingFirst'}
           />
+        )}
+
+        {quickUndo && !tip.open && !sheet && !menu && (
+          // a few seconds after any change, an undo button sits just past the die
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-0 w-0" style={{ rotate: `${facing}deg` }}>
+            <button
+              type="button"
+              onClick={undo}
+              className="tip-in pointer-events-auto absolute left-0 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/85 px-4 py-2 text-sm font-semibold text-bone shadow-lg ring-1 ring-white/15 active:bg-brass active:text-felt"
+              style={{ bottom: Math.round(d20Size * 0.62) }}
+            >
+              ↶ Undo
+            </button>
+          </div>
         )}
 
         {tip.open && game.phase === 'playing' && !spunYet && game.firstSeat != null && (
@@ -240,16 +294,41 @@ export default function Play() {
                 </div>
               )}
               <div className="flex flex-col gap-2">
+                {needsNames(game.config) && (
+                  <div className="mb-2 flex flex-col gap-1.5 rounded-xl border border-brass/40 bg-brass/10 p-3">
+                    <div className="text-sm font-semibold">Who played? Tap each seat to add a name.</div>
+                    {game.config.players.map((p, seat) => (
+                      <Btn key={seat} className="flex items-center justify-between text-left" onClick={() => setEditing(seat)}>
+                        <span>{p.name}</span>
+                        <span className={isQuickName(p.name) ? 'text-brass' : 'text-dim'}>{isQuickName(p.name) ? 'Add name' : '✓'}</span>
+                      </Btn>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
-                  <Btn variant="primary" className="flex-1" onClick={() => finish(true)}>
+                  <Btn variant="primary" className="flex-1" disabled={needsNames(game.config)} onClick={() => finish(true)}>
                     Rematch
                   </Btn>
-                  <Btn className="flex-1" onClick={() => finish(false)}>
+                  <Btn className="flex-1" disabled={needsNames(game.config)} onClick={() => finish(false)}>
                     Save game
                   </Btn>
                 </div>
-                <div className="-mt-1 text-center text-xs text-dim">Both save this game. Rematch keeps the same players and decks.</div>
+                <div className="-mt-1 text-center text-xs text-dim">
+                  {needsNames(game.config) ? 'Add every name to save this game.' : 'Both save this game. Rematch keeps the same players and decks.'}
+                </div>
                 <TakeBack game={game} dispatch={dispatch} />
+                {needsNames(game.config) && (
+                  <ConfirmBtn
+                    variant="quiet"
+                    confirmLabel="Tap again to throw this game away"
+                    onConfirm={() => {
+                      nav('/', { replace: true });
+                      discard();
+                    }}
+                  >
+                    Don't save this game
+                  </ConfirmBtn>
+                )}
               </div>
               {(() => {
                 const t = trophies(toRecord(game));
@@ -362,11 +441,13 @@ export default function Play() {
           seat={editing}
           // while seating, the phone is held upright to type in names and commanders;
           // once the game is on, open facing the player who tapped, like their panel
-          rot={game.phase === 'seating' ? 0 : (layout.rot[editing] + (turned ? 90 : 0)) % 360}
+          // the end-of-game card is upright too
+          rot={game.phase === 'seating' || game.phase === 'over' ? 0 : (layout.rot[editing] + (turned ? 90 : 0)) % 360}
           format={game.config.format}
           subFormat={game.config.subFormat}
-          initial={game.config.players[editing]}
-          takenNames={game.config.players.filter((_, i) => i !== editing).map((p) => p.name).filter(Boolean)}
+          // a quick-start "Player 2" isn't a real name, so start the box empty
+          initial={{ ...game.config.players[editing], name: isQuickName(game.config.players[editing].name) ? '' : game.config.players[editing].name }}
+          takenNames={game.config.players.filter((p, i) => i !== editing && !isQuickName(p.name)).map((p) => p.name).filter(Boolean)}
           onClose={() => setEditing(null)}
           onSave={(setup) => {
             dispatch({ t: 'seatInfo', seat: editing, setup });
