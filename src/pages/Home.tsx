@@ -6,10 +6,14 @@ import { useStore } from '../store';
 import { getSync } from '../sync';
 import { Ask, Bars, Cloud, Gavel } from '../components/icons';
 import { D20 } from '../ui';
+import AppQr from '../components/AppQr';
+import { needsNames } from '../game';
 
 export default function Home() {
-  const { game } = useStore();
+  const { game, lastConfig, start } = useStore();
   const nav = useNavigate();
+  const [sharing, setSharing] = useState(false);
+  const again = !game && lastConfig && lastConfig.players.every((p) => p.name.trim()) && !needsNames(lastConfig) ? lastConfig : null;
   const count = useLiveQuery(() => db.games.count(), []);
   const syncOn = !!getSync();
 
@@ -36,6 +40,22 @@ export default function Home() {
                     : `${game.config.players.map((p) => p.name).join(', ')}${game.round > 0 ? `, round ${game.round}` : ''}`}
                 </span>
               </span>
+            </button>
+          )}
+
+          {again && (
+            <button
+              onClick={() => {
+                start(again);
+                nav('/play');
+              }}
+              className="flex items-center gap-3 rounded-2xl bg-felt-2/90 px-5 py-4 text-left ring-1 ring-brass/50 transition hover:bg-felt-3 active:scale-[.98]"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block font-cond text-2xl leading-tight font-bold text-brass">Same table again</span>
+                <span className="block truncate text-sm text-dim">{again.players.map((p) => p.name).join(', ')}</span>
+              </span>
+              <span className="text-sm text-dim">Same decks</span>
             </button>
           )}
 
@@ -73,6 +93,25 @@ export default function Home() {
           ))}
         </nav>
 
+        {!installed && (
+          <p className="mt-3 rounded-2xl border border-brass/30 bg-brass/10 px-4 py-3 text-sm">
+            <span className="font-semibold text-brass">Keep Spindown one tap away.</span>{' '}
+            <span className="text-bone/80">iPhone: Share, then Add to Home Screen. Android: menu ⋮, then Install app.</span>
+          </p>
+        )}
+        <button
+          onClick={() => setSharing((v) => !v)}
+          className="mt-3 rounded-2xl bg-felt-2/80 px-4 py-3 text-left ring-1 ring-white/[.05] transition hover:bg-felt-3"
+        >
+          <span className="block font-cond text-lg leading-tight font-bold">Share Spindown</span>
+          <span className="block text-xs text-dim">{sharing ? 'Tap to hide' : 'QR code for a friend’s phone'}</span>
+        </button>
+        {sharing && (
+          <div className="mt-2">
+            <AppQr />
+          </div>
+        )}
+
         <footer className="mt-auto flex items-center justify-center gap-1 pt-12 text-xs text-dim">
           <About />
           <span aria-hidden>·</span>
@@ -82,6 +121,10 @@ export default function Home() {
     </div>
   );
 }
+
+// running from the home screen icon rather than a browser tab
+const installed =
+  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
 /** One of the big stacked buttons on Home. */
 function BigLink({ to, children, sub, tag, primary = false }: { to: string; children: ReactNode; sub?: string; tag?: string; primary?: boolean }) {

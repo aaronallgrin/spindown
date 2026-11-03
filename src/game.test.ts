@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { lethalCause, makeConfig, newGame, reduce, toRecord, turnOrder, type Action } from './game';
+import { lethalCause, makeConfig, needsNames, newGame, quickName, reduce, toRecord, turnOrder, type Action } from './game';
+import { recapText } from './recap';
 import { packUndo, unpackUndo } from './undoStore';
 import type { LiveGame } from './types';
 
@@ -157,5 +158,38 @@ describe('dandan events', () => {
     const marks = g.events.filter((e) => e.kind !== 'first').map((e) => `${e.seat}:${e.kind}`);
     expect(marks).toEqual(['1:dandanKill', '0:diminishing']);
     expect(toRecord(g).events.some((e) => e.kind === 'diminishing')).toBe(true);
+  });
+});
+
+describe('quick start', () => {
+  it('plays with placeholder names, then takes real ones after the game', () => {
+    const c = makeConfig('commander', undefined, 4, 'p4');
+    c.players = c.players.map((p, i) => ({ ...p, name: quickName(i) }));
+    let g = newGame(c);
+    expect(g.phase).toBe('choosingFirst');
+    g = run(g, { t: 'pick', seat: 0 }, { t: 'pick', seat: 0 }, { t: 'end', winner: 2 });
+    expect(needsNames(g.config)).toBe(true);
+    // no renaming mid-game
+    expect(reduce(started(), { t: 'seatInfo', seat: 0, setup: { ...c.players[0], name: 'X' } }).config.players[0].name).toBe('Aaron');
+    g = NAMES.reduce((x, name, seat) => reduce(x, { t: 'seatInfo', seat, setup: { ...x.config.players[seat], name } }), g);
+    expect(needsNames(g.config)).toBe(false);
+    expect(toRecord(g).winnerName).toBe('Chris');
+  });
+});
+
+describe('recap', () => {
+  it('names the winner, who went out how, and misplays', () => {
+    const g = run(
+      started(0),
+      { t: 'extra', seat: 3, d: 1 },
+      { t: 'extra', seat: 3, d: 1 },
+      { t: 'out', seat: 1, cause: 'poison' },
+      { t: 'end', winner: 0 },
+    );
+    const text = recapText(toRecord(g), 'https://x.test');
+    expect(text).toMatch(/^🏆 Aaron won/);
+    expect(text).toContain('Tim: out round');
+    expect(text).toContain('* Misplays: Cody 2');
+    expect(text.endsWith('Tracked with Spindown https://x.test')).toBe(true);
   });
 });
