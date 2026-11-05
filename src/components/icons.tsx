@@ -34,12 +34,6 @@ export const Gavel = ({ size = 22, className }: P) => (
   </svg>
 );
 
-export const Bars = ({ size = 22, className }: P) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-    <path d="M5 20V12M10 20V5M15 20v-9M20 20V8" />
-  </svg>
-);
-
 export const Ask = ({ size = 22, className }: P) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <circle cx="11" cy="11" r="7" />
@@ -50,12 +44,6 @@ export const Ask = ({ size = 22, className }: P) => (
 export const Cloud = ({ size = 22, className }: P) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.1 9.5 4.3 4.3 0 0 0 7 18z" />
-  </svg>
-);
-
-export const Chevron = ({ size = 20, className }: P) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M15 5l-7 7 7 7" />
   </svg>
 );
 

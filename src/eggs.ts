@@ -55,7 +55,7 @@ export function lifeEgg(before: number, after: number, highest: boolean): Egg | 
     return VALUES[11];
   if (after === 11) return VALUES[11];
   if (d === -21) return { id: 'ouch-21', text: 'Ouch. That smelled like pure lethal Commander damage.' };
-  if (before > 0 && before % 2 === 0 && after === before / 2 && before >= 10)
+  if (before >= 10 && before % 2 === 0 && after === before / 2)
     return { id: 'demon', text: 'Signing a contract with a demon? Bold strategy.' };
   if (d >= 15) return { id: 'sailor-moon', text: 'In the name of the moon, I will punish you! (And heal myself.)' };
   if (d <= -15 && highest) return { id: 'sorrow', text: "I've completely immersed myself in shadow." };

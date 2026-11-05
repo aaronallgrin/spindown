@@ -58,7 +58,7 @@ export default function FindGame() {
       <div className="flex flex-col gap-4">
         <Link
           to="/find/new"
-          className="rounded-2xl bg-brass py-4 text-center font-cond text-2xl font-bold text-felt shadow-[0_10px_30px_-10px_rgba(255,163,26,.6)]"
+          className="rounded-2xl bg-brass py-4 text-center font-cond text-2xl font-bold text-felt"
         >
           Start a poll
         </Link>
