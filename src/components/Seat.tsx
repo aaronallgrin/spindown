@@ -9,7 +9,7 @@ import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
 import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
 
-export type SheetKind = 'panel' | 'keypad' | 'events';
+export type SheetKind = 'panel' | 'keypad' | 'events' | 'star';
 
 interface Props {
   game: LiveGame;
@@ -42,7 +42,6 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
   // hints fade once this player has used their panel
   const used = useUsed(coach, `${p.life}|${p.poison}|${JSON.stringify(p.cmdr)}|${panel}`);
   const showCoach = coach && !used && !p.out && !lethal;
-  const monarch = game.monarchSeat === seat;
   // one hit from lethal: the edge of the panel pulses red
   const danger =
     game.phase === 'playing' &&
@@ -89,19 +88,21 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
   });
 
   const shamedRound = useRef(-1);
+  useSettled(p.extra ?? 0, (before, after) => {
+    // at most one shaming per player per round
+    if (after > before && canEgg() && shamedRound.current !== live.current.round && mayWhisper(seat)) {
+      shamedRound.current = live.current.round;
+      say(shame());
+    }
+  });
   const star = usePress(
-    () => {
-      dispatch({ t: 'extra', seat, d: 1 });
-      // at most one shaming per player per round
-      if (canEgg() && shamedRound.current !== live.current.round && mayWhisper(seat)) {
-        shamedRound.current = live.current.round;
-        say(shame());
-      }
-    },
+    () => setSheet('star'),
     () => dispatch({ t: 'extra', seat, d: -1 }),
     500,
     1e9,
   );
+  // hold your name to fix your deck mid-game (a forgotten commander)
+  const nameHold = usePress(() => {}, game.phase === 'playing' ? onEdit : undefined, 600, 1e9);
 
   const minus = usePress(
     () => dispatch({ t: 'life', seat, d: -1 }),
@@ -142,6 +143,12 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
             }}
           >
             <div className="min-w-0 flex-1">
+              <button
+                type="button"
+                {...nameHold}
+                aria-label={`${setup.name}. Hold to change your commander or deck`}
+                className="relative z-10 block max-w-full text-left"
+              >
               <div className="truncate font-semibold" style={{ fontSize: 'clamp(13px, 8cqh, 26px)' }}>
                 {setup.name}
               </div>
@@ -160,12 +167,8 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                   {setup.hasPartner && setup.partner ? ` + ${setup.partner.name}` : ''}
                 </div>
               )}
+              </button>
             </div>
-            {monarch && !p.out && (
-              <span className="crown-in shrink-0 text-brass" title="Monarch" aria-label="Monarch" style={{ marginTop: '0.4cqh' }}>
-                <Crown size="11cqh" />
-              </span>
-            )}
           </div>
 
           {/* life with tap halves */}
@@ -214,10 +217,9 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                 .filter(Boolean)
                 .join(', ')}
             >
+              <span className="text-[0.85em] text-bone/80">Counters</span>
               {/* what's on this player shows right on the button, so nobody has to open it to check */}
-              {p.poison > 0 || (isCmdr && cmdrMax > 0) ? (
-                <>
-                  {p.poison > 0 && (
+              {p.poison > 0 && (
                     <Badge tone={p.poison >= POISON_LETHAL - 2 ? 'hot' : 'poison'}>
                       <Poison size="1.05em" />
                       {p.poison}
@@ -229,10 +231,6 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                       {cmdrMax}
                     </Badge>
                   )}
-                </>
-              ) : (
-                <span className="text-[0.85em] text-bone/80">Counters</span>
-              )}
             </button>
             {dandan && (
               <button
@@ -248,7 +246,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
             {extraName && (
               <button
                 {...star}
-                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to add, hold to take one back`}
+                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to pick a reason, hold to take one back`}
                 className={`flex h-[2.6em] min-w-[2.6em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
                   (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/60 text-bone/80'
                 }`}
@@ -432,6 +430,8 @@ export function SeatSheet({
                   close();
                 }}
               />
+            ) : kind === 'star' ? (
+              <StarPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : kind === 'events' ? (
               <EventsPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : (
@@ -439,6 +439,43 @@ export function SeatSheet({
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const STAR_REASONS = ['Misplay', 'Take-back', 'Slow play', 'Missed trigger', 'Forgot something', 'Other'];
+
+/** Tapping the * opens this: what the * means, and why this one was earned. */
+function StarPanel({ game, seat, dispatch, close }: { game: LiveGame; seat: number; dispatch: (a: Action) => void; close: () => void }) {
+  const name = game.config.extraCounter?.trim() ?? '*';
+  const count = game.players[seat].extra ?? 0;
+  const tally = new Map<string, number>();
+  for (const e of game.events)
+    if (e.kind === 'extra' && e.seat === seat && e.note) tally.set(e.note, (tally.get(e.note) ?? 0) + (e.delta ?? 0));
+  const so = [...tally].filter(([, n]) => n > 0).map(([r, n]) => (n > 1 ? `${r} ×${n}` : r));
+  return (
+    <div className="absolute inset-0 flex flex-col p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.2cqh, 20px)' }}>
+      <p className="mb-[1.5cqh] text-bone/80">
+        A <span className="font-cond font-bold text-brass">{name}</span> marks a mistake. What happened?
+        {so.length > 0 && <span className="block text-[0.85em] text-dim">This game: {so.join(', ')}</span>}
+      </p>
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.5cqh]">
+        {STAR_REASONS.map((r) => (
+          <button key={r} onClick={() => (buzz(), dispatch({ t: 'extra', seat, d: 1, note: r }), close())} className="rounded-lg bg-felt-3 px-2 font-semibold active:bg-line">
+            {r}
+          </button>
+        ))}
+      </div>
+      <div className="mt-[2cqh] flex gap-2 [&>*]:flex-1">
+        {count > 0 && (
+          <button className="rounded-lg bg-felt-3 px-3 py-[1.6cqh] text-bone/80" onClick={() => (dispatch({ t: 'extra', seat, d: -1 }), close())}>
+            Take one back
+          </button>
+        )}
+        <button className="rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
+          Cancel
+        </button>
       </div>
     </div>
   );
@@ -710,16 +747,6 @@ function CounterPanel({
       <div className="mt-[2cqh] flex flex-col gap-2">
         {!p.out && game.phase === 'playing' && (
           <div className="flex gap-2 [&>*]:flex-1">
-            <button
-              onClick={() => (buzz(), dispatch({ t: 'monarch', seat }))}
-              aria-pressed={game.monarchSeat === seat}
-              aria-label={game.monarchSeat === seat ? 'Monarch. Tap to give it up' : 'Become the monarch'}
-              className={`flex items-center justify-center rounded-lg px-3 py-[1.6cqh] ${
-                game.monarchSeat === seat ? 'bg-brass text-felt' : 'bg-felt-3 text-bone/70'
-              }`}
-            >
-              <Crown size="1.3em" />
-            </button>
             <TwoTap
               label="Win"
               className="bg-brass/20 text-brass"

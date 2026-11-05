@@ -120,6 +120,8 @@ export interface GameEvent {
   from?: number;
   partner?: 0 | 1;
   cause?: OutCause;
+  /** why a * was given (misplay, slow…), for kind 'extra' */
+  note?: string;
   /** easter egg id, for kind 'egg' */
   egg?: string;
 }
@@ -139,7 +141,6 @@ export interface LiveGame {
   round: number;
   /** total turns taken, 1-based */
   turn: number;
-  monarchSeat: number | null;
   players: LivePlayer[];
   events: GameEvent[];
   winnerSeat: number | null;
@@ -164,7 +165,8 @@ export interface PlayerResult {
   finalPoison: number;
   cmdrDamageTaken: number;
   finalExtra?: number;
-  wasMonarchAtEnd: boolean;
+  /** only on games from before monarch tracking was removed */
+  wasMonarchAtEnd?: boolean;
 }
 
 export interface GameRecord {

@@ -41,7 +41,7 @@ export default function FindGame() {
 
   if (!cfg)
     return (
-      <Page title="Find a game">
+      <Page title="Plan game night">
         <div className="flex flex-col gap-3">
           <p className="rounded-xl bg-felt-2 p-4 text-dim">
             Polls are shared through your group's Supabase. Turn on cloud sync on this phone, or open a poll link a friend sent you.
@@ -54,7 +54,7 @@ export default function FindGame() {
     );
 
   return (
-    <Page title="Find a game">
+    <Page title="Plan game night">
       <div className="flex flex-col gap-4">
         <Link
           to="/find/new"

@@ -3,8 +3,10 @@
 A Magic: The Gathering life counter for one shared phone, built for 4-player Commander and fine for 2–6 players and other formats. Every finished game is saved with who went first, turn of each elimination and how it happened, commanders, color identity and bracket, so the group can look at stats later.
 
 ## What it tracks
-- Life, poison, commander damage per opposing commander (partners counted separately), monarch (crown button in Counters)
-- Poison, the biggest commander damage and the monarch's crown show on each panel; a panel one hit from lethal pulses red
+- Life, poison, commander damage per opposing commander (partners counted separately)
+- Poison and the biggest commander damage show on each panel's Counters button; a panel one hit from lethal pulses red
+- The * (misplay) counter: tap it to pick why (misplay, take-back, slow play…), hold to take one back
+- Forgot to add your commander? Hold your name on your panel mid-game to fix your deck
 - Counters screen also sets a life total or gains/loses an amount; tap anywhere else to back out
 - Center d20: shows the round; tap for the next round, double-tap to go back one, hold for the menu (undo, end game, leave, discard)
 - First player: once everyone's seated, tap a seat, tap again to confirm (tapping the die rolls a plain d20 if no one has dice)
@@ -27,11 +29,11 @@ Cloud sync: run `supabase/games.sql`, then `supabase/games_updated_at.sql`, once
 
 Backup: `.github/workflows/backup.yml` runs every night, saves every game and poll as a downloadable artifact (kept 90 days), and keeps the free Supabase project from pausing. To restore, download `spindown-backup.json` from a run and use History, then Import backup. Run it by hand from the Actions tab any time.
 
-## Find a game
+## Plan game night
 Availability polls for the group, kept in the same Supabase project as cloud sync.
 Run `supabase/polls.sql` once in the Supabase SQL Editor to add the `polls` and `poll_responses` tables.
 
-- Home, Find a game, Start a poll: format (brackets for Commander), up to 7 days, hours, game length, players needed.
+- Home, Plan game night, Start a poll: format (brackets for Commander), up to 7 days, hours, game length, players needed.
 - Share sends a link that carries the group's connection, so friends open it and answer with just their name. No accounts and no cloud sync setup.
 - Everyone paints their free hours. The poll ranks the best windows that fit the whole game and shows who can make each.
 - The host locks in a time. Everyone can then add it to Apple Calendar (an .ics file) or Google Calendar.

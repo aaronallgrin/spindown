@@ -60,7 +60,6 @@ export function newGame(config: GameConfig): LiveGame {
     activeSeat: null,
     round: 0,
     turn: 0,
-    monarchSeat: null,
     winnerSeat: null,
     events: [],
     players: config.players.map((_, seat) => ({
@@ -79,11 +78,10 @@ export type Action =
   | { t: 'egg'; seat: number; egg: string }
   | { t: 'poison'; seat: number; d: number }
   | { t: 'cmdr'; seat: number; from: number; partner: 0 | 1; d: number }
-  | { t: 'monarch'; seat: number }
   | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
-  | { t: 'extra'; seat: number; d: number }
+  | { t: 'extra'; seat: number; d: number; note?: string }
   | { t: 'mark'; seat: number; kind: DandanMark; d: 1 | -1 }
   | { t: 'round'; d: 1 | -1 }
   | { t: 'out'; seat: number; cause: OutCause }
@@ -123,6 +121,7 @@ function log(g: LiveGame, e: Omit<GameEvent, 'at' | 'round' | 'turn'>): GameEven
     last.seat === e.seat &&
     last.from === e.from &&
     last.partner === e.partner &&
+    last.note === e.note &&
     last.turn === g.turn &&
     at - last.at < 4000 &&
     Math.sign(last.delta ?? 0) === Math.sign(e.delta ?? 0)
@@ -206,18 +205,11 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         events: log(g, { kind: 'cmdr', seat: a.seat, from: a.from, partner: a.partner, delta: real }),
       };
     }
-    case 'monarch': {
-      const seat = g.monarchSeat === a.seat ? null : a.seat;
-      return {
-        ...g,
-        monarchSeat: seat,
-        events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: seat ?? -1, kind: 'monarch' }],
-      };
-    }
     case 'seatInfo': {
-      // 'over' too: a quick-start game gets its names and decks after the last hit
-      if (g.phase === 'playing') return g;
-      const players = g.config.players.map((p, i) => (i === a.seat ? a.setup : p));
+      // 'over' too: a quick-start game gets its names and decks after the last hit.
+      // Mid-game only the deck can change (a forgotten commander), never the name.
+      const playing = g.phase === 'playing';
+      const players = g.config.players.map((p, i) => (i !== a.seat ? p : playing ? { ...a.setup, name: p.name } : a.setup));
       return { ...g, config: { ...g.config, players } };
     }
     case 'ready':
@@ -242,7 +234,7 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const n = patch(g, a.seat, (p) => ({ ...p, extra: Math.max(0, (p.extra ?? 0) + a.d) }));
       const real = (n.players[a.seat].extra ?? 0) - (g.players[a.seat].extra ?? 0);
       if (!real) return g;
-      return { ...n, events: log(g, { kind: 'extra', seat: a.seat, delta: real }) };
+      return { ...n, events: log(g, { kind: 'extra', seat: a.seat, delta: real, note: a.note }) };
     }
     case 'mark': {
       if (g.phase !== 'playing') return g;
@@ -270,7 +262,6 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       }));
       const withLog = {
         ...n,
-        monarchSeat: g.monarchSeat === a.seat ? null : g.monarchSeat,
         events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'out' as const, cause: a.cause }],
       };
       return finishIfOver(withLog);
@@ -348,7 +339,6 @@ export function toRecord(g: LiveGame): GameRecord {
       finalPoison: p.poison,
       cmdrDamageTaken: Object.values(p.cmdr).reduce((a, b) => a + b, 0),
       finalExtra: g.config.extraCounter ? (p.extra ?? 0) : undefined,
-      wasMonarchAtEnd: g.monarchSeat === p.seat,
     };
   });
   const winner = players.find((p) => p.result === 'win');
