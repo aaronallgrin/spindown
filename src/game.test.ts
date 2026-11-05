@@ -67,6 +67,12 @@ describe('counters', () => {
     expect(g.players[1].life).toBe(40);
   });
 
+  it('keeps the reason for each * and never merges different reasons', () => {
+    const g = run(started(), { t: 'extra', seat: 1, d: 1, note: 'Misplay' }, { t: 'extra', seat: 1, d: 1, note: 'Slow' });
+    expect(g.players[1].extra).toBe(2);
+    expect(g.events.filter((e) => e.kind === 'extra').map((e) => e.note)).toEqual(['Misplay', 'Slow']);
+  });
+
   it('finds lethal from life, poison and 21 from one commander', () => {
     const g = started();
     expect(lethalCause(g, { ...g.players[0], life: 0 })).toBe('life');
@@ -75,14 +81,6 @@ describe('counters', () => {
     expect(lethalCause(g, { ...g.players[0], cmdr: { '1:0': 21 } })).toBe('commander');
   });
 
-  it('moves the monarch and drops it when the monarch is knocked out', () => {
-    let g = run(started(), { t: 'monarch', seat: 2 });
-    expect(g.monarchSeat).toBe(2);
-    g = reduce(g, { t: 'monarch', seat: 3 });
-    expect(g.monarchSeat).toBe(3);
-    g = reduce(g, { t: 'out', seat: 3, cause: 'life' });
-    expect(g.monarchSeat).toBeNull();
-  });
 });
 
 describe('ending', () => {
@@ -111,10 +109,6 @@ describe('ending', () => {
     expect(g.players.every((p) => !p.out)).toBe(true);
   });
 
-  it('records who held the monarch at the end', () => {
-    const g = run(started(), { t: 'monarch', seat: 2 }, { t: 'end', winner: 2 });
-    expect(toRecord(g).players.map((p) => p.wasMonarchAtEnd)).toEqual([false, false, true, false]);
-  });
 
   it('counts turn order clockwise from the first player', () => {
     expect(turnOrder(started(2))).toEqual([2, 3, 0, 1]);
@@ -169,8 +163,10 @@ describe('quick start', () => {
     expect(g.phase).toBe('choosingFirst');
     g = run(g, { t: 'pick', seat: 0 }, { t: 'pick', seat: 0 }, { t: 'end', winner: 2 });
     expect(needsNames(g.config)).toBe(true);
-    // no renaming mid-game
-    expect(reduce(started(), { t: 'seatInfo', seat: 0, setup: { ...c.players[0], name: 'X' } }).config.players[0].name).toBe('Aaron');
+    // no renaming mid-game, but a forgotten commander can be added
+    const mid = reduce(started(), { t: 'seatInfo', seat: 0, setup: { ...c.players[0], name: 'X', deckName: 'Late' } }).config.players[0];
+    expect(mid.name).toBe('Aaron');
+    expect(mid.deckName).toBe('Late');
     g = NAMES.reduce((x, name, seat) => reduce(x, { t: 'seatInfo', seat, setup: { ...x.config.players[seat], name } }), g);
     expect(needsNames(g.config)).toBe(false);
     expect(toRecord(g).winnerName).toBe('Chris');

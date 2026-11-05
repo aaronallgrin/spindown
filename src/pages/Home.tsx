@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useStore } from '../store';
 import { getSync } from '../sync';
-import { Ask, Bars, Cloud, Gavel } from '../components/icons';
+import { Ask, Cloud, Gavel } from '../components/icons';
 import { D20 } from '../ui';
 import AppQr from '../components/AppQr';
 import { needsNames } from '../game';
@@ -59,13 +59,13 @@ export default function Home() {
             </button>
           )}
 
-          <BigLink to="/new" sub="Life counter">
+          <BigLink to="/new" primary sub="Life counter">
             New game
           </BigLink>
-          <BigLink to="/find" primary tag="NEW">
-            Find a game
+          <BigLink to="/find" tag="NEW">
+            Plan game night
           </BigLink>
-          <BigLink to="/history" sub={count ? `${count} games` : undefined}>
+          <BigLink to="/history" sub={count ? `${count} games · stats` : 'Stats'}>
             Game history
           </BigLink>
         </div>
@@ -73,9 +73,7 @@ export default function Home() {
         <nav className="mt-3 grid grid-cols-2 gap-2.5">
           {[
             { to: '/judge', title: 'Ask a Judge', sub: 'Rules, rulings', icon: <Gavel /> },
-            { to: '/stats', title: 'Stats', sub: 'Win rates, games', icon: <Bars /> },
             { to: '/query', title: 'Query', sub: 'Ask your games', icon: <Ask /> },
-            { to: '/sync', title: 'Cloud sync', sub: syncOn ? 'On' : 'Back up games', icon: <Cloud /> },
           ].map((t) => (
             <Link
               key={t.to}
@@ -99,13 +97,24 @@ export default function Home() {
             <span className="text-bone/80">iPhone: Share, then Add to Home Screen. Android: menu ⋮, then Install app.</span>
           </p>
         )}
-        <button
-          onClick={() => setSharing((v) => !v)}
-          className="mt-3 rounded-2xl bg-felt-2/80 px-4 py-3 text-left ring-1 ring-white/[.05] transition hover:bg-felt-3"
-        >
-          <span className="block font-cond text-lg leading-tight font-bold">Share Spindown</span>
-          <span className="block text-xs text-dim">{sharing ? 'Tap to hide' : 'QR code for a friend’s phone'}</span>
-        </button>
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          <button
+            onClick={() => setSharing((v) => !v)}
+            className="rounded-2xl bg-felt-2/80 px-4 py-3 text-left ring-1 ring-white/[.05] transition hover:bg-felt-3"
+          >
+            <span className="block font-cond text-lg leading-tight font-bold">Share Spindown</span>
+            <span className="block truncate text-xs text-dim">{sharing ? 'Tap to hide' : 'QR code for a friend’s phone'}</span>
+          </button>
+          <Link to="/sync" className="flex items-center gap-3 rounded-2xl bg-felt-2/80 px-3.5 py-3 ring-1 ring-white/[.05] transition hover:bg-felt-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[.06] text-brass">
+              <Cloud />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-cond text-lg leading-tight font-bold">Cloud sync</span>
+              <span className="block truncate text-xs text-dim">{syncOn ? 'On' : 'Back up games'}</span>
+            </span>
+          </Link>
+        </div>
         {sharing && (
           <div className="mt-2">
             <AppQr />
