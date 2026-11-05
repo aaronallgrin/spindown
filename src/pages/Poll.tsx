@@ -209,7 +209,7 @@ export default function Poll() {
               role="tab"
               aria-selected={tab === v}
               onClick={() => (setTab(v), setPeek(null))}
-              className={`flex-1 rounded-full px-2 py-2 text-sm transition ${tab === v ? 'bg-bone font-semibold text-felt shadow' : 'text-dim hover:text-bone'}`}
+              className={`flex-1 rounded-full px-2 py-2 text-sm transition ${tab === v ? 'bg-brass font-semibold text-felt shadow' : 'text-dim hover:text-bone'}`}
             >
               {l}
             </button>

@@ -98,7 +98,7 @@ export default function NewGame() {
                       aria-pressed={on}
                       onClick={() => update({ other: { format: g.format, sub: s.name } })}
                       className={`rounded-full px-3.5 py-1.5 text-sm transition ${
-                        on ? 'bg-bone font-semibold text-felt' : 'bg-white/[.06] text-bone/85 hover:bg-white/10'
+                        on ? 'bg-brass font-semibold text-felt' : 'bg-white/[.06] text-bone/85 hover:bg-white/10'
                       }`}
                     >
                       {s.name}
@@ -139,7 +139,7 @@ export default function NewGame() {
                 aria-pressed={prefs.players === n}
                 onClick={() => update({ players: n })}
                 className={`h-12 w-12 rounded-full font-cond text-2xl font-bold transition ${
-                  prefs.players === n ? 'bg-bone text-felt' : 'bg-white/[.06] text-bone/85 hover:bg-white/10'
+                  prefs.players === n ? 'bg-brass font-semibold text-felt' : 'bg-white/[.06] text-bone/85 hover:bg-white/10'
                 }`}
               >
                 {n}
@@ -253,7 +253,7 @@ function SeatPill({ layout, on, onPick, onPeek }: { layout: Layout; on: boolean;
       onPointerLeave={end(press.onPointerLeave)}
       onPointerCancel={end(press.onPointerCancel)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onPick()}
-      className={`flex-1 select-none rounded-full px-2 py-2 text-sm transition ${on ? 'bg-bone font-semibold text-felt shadow' : 'text-dim hover:text-bone'}`}
+      className={`flex-1 select-none rounded-full px-2 py-2 text-sm transition ${on ? 'bg-brass font-semibold text-felt shadow' : 'text-dim hover:text-bone'}`}
       style={{ WebkitTouchCallout: 'none' }}
     >
       {layout.label}
