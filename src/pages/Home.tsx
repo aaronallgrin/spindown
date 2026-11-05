@@ -111,7 +111,7 @@ export default function Home() {
             </span>
             <span className="min-w-0">
               <span className="block font-cond text-lg leading-tight font-bold">Cloud sync</span>
-              <span className="block truncate text-xs text-dim">{syncOn ? 'On' : 'Back up games'}</span>
+              <span className={`block truncate text-xs font-semibold ${syncOn ? 'text-green-400' : 'text-red-400'}`}>{syncOn ? 'On' : 'Off'}</span>
             </span>
           </Link>
         </div>
