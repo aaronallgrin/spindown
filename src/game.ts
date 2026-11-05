@@ -358,3 +358,15 @@ export function toRecord(g: LiveGame): GameRecord {
     synced: 0,
   };
 }
+
+/** The reasons behind a player's * counters, oldest first. A take-back removes their latest one. */
+export function starReasons(events: GameEvent[], seat: number): { note?: string; round: number }[] {
+  const out: { note?: string; round: number }[] = [];
+  for (const e of events) {
+    if (e.kind !== 'extra' || e.seat !== seat) continue;
+    const d = e.delta ?? 0;
+    for (let i = 0; i < d; i++) out.push({ note: e.note, round: e.round });
+    if (d < 0) out.splice(Math.max(0, out.length + d));
+  }
+  return out;
+}

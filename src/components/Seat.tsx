@@ -9,7 +9,7 @@ import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
 import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
 
-export type SheetKind = 'panel' | 'keypad' | 'events' | 'star';
+export type SheetKind = 'panel' | 'keypad' | 'events' | 'star' | 'cmdr';
 
 interface Props {
   game: LiveGame;
@@ -413,7 +413,7 @@ export function SeatSheet({
         <div className="face-inner flex flex-col bg-felt">
           <div className="flex items-center gap-3 px-[2.5cqh] pt-[2cqh]" style={{ fontSize: 'clamp(13px, 3.2cqh, 20px)' }}>
             <button
-              onClick={() => (kind === 'keypad' ? setSheet('panel') : close())}
+              onClick={() => (kind === 'keypad' || kind === 'cmdr' ? setSheet('panel') : close())}
               className="flex min-h-[2.6em] items-center rounded-full bg-felt-3 px-[1.1em] font-semibold text-bone/90 active:bg-line"
             >
               ‹ Back
@@ -430,12 +430,14 @@ export function SeatSheet({
                   close();
                 }}
               />
+            ) : kind === 'cmdr' ? (
+              <CmdrPanel game={game} seat={seat} dispatch={dispatch} done={() => setSheet('panel')} />
             ) : kind === 'star' ? (
               <StarPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : kind === 'events' ? (
               <EventsPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : (
-              <CounterPanel game={game} seat={seat} dispatch={dispatch} close={close} openLife={() => setSheet('keypad')} />
+              <CounterPanel game={game} seat={seat} dispatch={dispatch} close={close} open={setSheet} />
             )}
           </div>
         </div>
@@ -499,7 +501,7 @@ function EventsPanel({ game, seat, dispatch, close }: { game: LiveGame; seat: nu
           />
         ))}
       </div>
-      <button className="mt-[2cqh] rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
+      <button className="mt-[1.5cqh] h-[11cqh] min-h-11 shrink-0 rounded-xl bg-brass text-[1.15em] font-semibold text-felt active:bg-brass-2" onClick={close}>
         Done
       </button>
     </div>
@@ -674,51 +676,73 @@ function useDelta(life: number) {
   return d;
 }
 
+/** Commander damage sources for this player: opponents first, then your own commander (it can hit you too, e.g. when stolen). */
+function cmdrSources(game: LiveGame, seat: number) {
+  const order = [...game.config.players.keys()].filter((i) => i !== seat).concat(seat);
+  return order.flatMap((i) => {
+    const op = game.config.players[i];
+    const who = i === seat ? 'Your own commander' : `from ${op.name}`;
+    const colors = op.colors.length ? sortMana(op.colors).map((m) => manaVar[m]) : [manaVar.C];
+    const one = (partner: 0 | 1, card: typeof op.commander) => ({
+      from: i,
+      partner,
+      who,
+      colors,
+      label: card?.name ?? (partner ? 'Partner' : 'Commander'),
+      art: card?.artCrop,
+    });
+    return op.hasPartner ? [one(0, op.commander), one(1, op.partner)] : [one(0, op.commander)];
+  });
+}
+
 function CounterPanel({
   game,
   seat,
   dispatch,
   close,
-  openLife,
+  open,
 }: {
   game: LiveGame;
   seat: number;
   dispatch: (a: Action) => void;
   close: () => void;
-  openLife: () => void;
+  open: (s: SheetKind) => void;
 }) {
   const p = game.players[seat];
   const isCmdr = game.config.format === 'commander';
-  const sources: { from: number; partner: 0 | 1; label: string; who: string; colors: string[] }[] = [];
-  if (isCmdr) {
-    // opponents first, then your own commander (it can hit you too, e.g. when stolen)
-    const order = [...game.config.players.keys()].filter((i) => i !== seat).concat(seat);
-    for (const i of order) {
-      const op = game.config.players[i];
-      const who = i === seat ? 'your own commander' : op.name;
-      const c = op.colors.length ? sortMana(op.colors).map((m) => manaVar[m]) : [manaVar.C];
-      sources.push({ from: i, partner: 0, who, label: op.commander?.name ?? 'Commander', colors: c });
-      if (op.hasPartner) sources.push({ from: i, partner: 1, who, label: op.partner?.name ?? 'Partner', colors: c });
-    }
-  }
-  const tiles = sources.length + 2;
-  const cols = tiles <= 2 ? tiles : tiles <= 6 ? 3 : 4;
+  const extraName = game.config.extraCounter?.trim();
+  // the commander that has hit this player hardest, shown on the button
+  const worst = isCmdr
+    ? cmdrSources(game, seat).reduce<{ v: number; who: string } | null>((best, s) => {
+        const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
+        return v > (best?.v ?? 0) ? { v, who: s.who } : best;
+      }, null)
+    : null;
+  const big = 'relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-xl bg-felt-3 px-2 text-center active:bg-line';
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.2cqh, 20px)' }}>
-      <div className="grid flex-1 gap-[1.5cqh]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-        <button
-          onClick={openLife}
-          className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg bg-felt-3 px-1 pt-1"
-          aria-label="Set, gain or lose life"
-        >
+    <div className="absolute inset-0 z-10 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(14px, 3.8cqh, 22px)' }}>
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.5cqh]" style={{ gridAutoRows: '1fr' }}>
+        <button onClick={() => (buzz(), open('keypad'))} className={big} aria-label="Set, gain or lose life">
           <div className="absolute inset-x-0 top-0 h-[3px] bg-brass" />
-          <span className="w-full truncate text-center font-semibold leading-tight">Life</span>
-          <span className="w-full truncate text-center text-[0.8em] text-dim">Set · gain · lose</span>
-          <span className="font-cond font-bold leading-none tabular-nums" style={{ fontSize: '2.6em' }}>
+          <span className="font-semibold leading-tight">Life</span>
+          <span className="text-[0.8em] text-dim">Tap to set · gain · lose</span>
+          <span className="font-cond font-bold leading-none tabular-nums" style={{ fontSize: '2.8em' }}>
             {p.life}
           </span>
         </button>
+        {isCmdr && (
+          <button onClick={() => (buzz(), open('cmdr'))} className={big} aria-label="Commander damage">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-bone/60" />
+            <span className="flex items-center gap-1.5 font-semibold leading-tight">
+              <Sword size="1em" /> Commander damage
+            </span>
+            <span className="w-full truncate text-[0.8em] text-dim">{!worst ? 'Tap to pick a commander' : worst.who.startsWith('from') ? `Most ${worst.who}` : 'Most from your own commander'}</span>
+            <span className={`font-cond font-bold leading-none tabular-nums ${(worst?.v ?? 0) >= CMDR_LETHAL ? 'text-blood' : ''}`} style={{ fontSize: '2.8em' }}>
+              {worst?.v ?? 0}
+            </span>
+          </button>
+        )}
         <Tile
           label="Poison"
           who={`${POISON_LETHAL} is lethal`}
@@ -728,55 +752,81 @@ function CounterPanel({
           onPlus={() => dispatch({ t: 'poison', seat, d: 1 })}
           onMinus={() => dispatch({ t: 'poison', seat, d: -1 })}
         />
+        {extraName && (
+          <Tile
+            label={extraName}
+            who="Misplays · + picks a reason"
+            value={p.extra ?? 0}
+            lethal={false}
+            stripe={[manaVar.R]}
+            onPlus={() => open('star')}
+            onMinus={() => dispatch({ t: 'extra', seat, d: -1 })}
+          />
+        )}
+      </div>
+      {!p.out && game.phase === 'playing' && (
+        <div className="grid h-[11cqh] min-h-11 grid-cols-3 gap-[1.5cqh]">
+          <TwoTap
+            label="Win"
+            className="bg-brass/20 text-brass"
+            onConfirm={() => {
+              dispatch({ t: 'win', seat });
+              close();
+            }}
+          />
+          <TwoTap
+            label="Lose"
+            className="bg-felt-3 text-bone/80"
+            onConfirm={() => {
+              dispatch({ t: 'out', seat, cause: 'lose' });
+              close();
+            }}
+          />
+          <TwoTap
+            label="Concede"
+            className="bg-felt-3 text-bone/80"
+            onConfirm={() => {
+              dispatch({ t: 'out', seat, cause: 'concede' });
+              close();
+            }}
+          />
+        </div>
+      )}
+      <button className="h-[11cqh] min-h-11 shrink-0 rounded-xl bg-brass text-[1.15em] font-semibold text-felt active:bg-brass-2" onClick={close}>
+        Done
+      </button>
+    </div>
+  );
+}
+
+/** Commander damage: one tile per commander at the table, with its art, split − / + like the life total. */
+function CmdrPanel({ game, seat, dispatch, done }: { game: LiveGame; seat: number; dispatch: (a: Action) => void; done: () => void }) {
+  const p = game.players[seat];
+  const sources = cmdrSources(game, seat);
+  const cols = sources.length <= 2 ? 1 : sources.length <= 4 ? 2 : 3;
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(14px, 3.8cqh, 22px)' }}>
+      <div className="grid min-h-0 flex-1 gap-[1.5cqh]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridAutoRows: '1fr' }}>
         {sources.map((s) => {
           const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
           return (
             <Tile
               key={`${s.from}:${s.partner}`}
               label={s.label}
-              who={`Cmdr damage from ${s.who}`}
+              who={s.who}
               value={v}
               lethal={v >= CMDR_LETHAL}
               stripe={s.colors}
+              art={s.art}
               onPlus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: 1 })}
               onMinus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: -1 })}
             />
           );
         })}
       </div>
-      <div className="mt-[2cqh] flex flex-col gap-2">
-        {!p.out && game.phase === 'playing' && (
-          <div className="flex gap-2 [&>*]:flex-1">
-            <TwoTap
-              label="Win"
-              className="bg-brass/20 text-brass"
-              onConfirm={() => {
-                dispatch({ t: 'win', seat });
-                close();
-              }}
-            />
-            <TwoTap
-              label="Lose"
-              className="bg-felt-3 text-bone/80"
-              onConfirm={() => {
-                dispatch({ t: 'out', seat, cause: 'lose' });
-                close();
-              }}
-            />
-            <TwoTap
-              label="Concede"
-              className="bg-felt-3 text-bone/80"
-              onConfirm={() => {
-                dispatch({ t: 'out', seat, cause: 'concede' });
-                close();
-              }}
-            />
-          </div>
-        )}
-        <button className="rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
-          Done
-        </button>
-      </div>
+      <button className="h-[11cqh] min-h-11 shrink-0 rounded-xl bg-brass text-[1.15em] font-semibold text-felt active:bg-brass-2" onClick={done}>
+        Done
+      </button>
     </div>
   );
 }
@@ -791,20 +841,22 @@ function TwoTap({ label, className, onConfirm }: { label: string; className: str
   }, [armed]);
   return (
     <button
-      className={`rounded-lg px-3 py-[1.6cqh] font-semibold ${armed ? 'bg-blood text-bone' : className}`}
-      onClick={() => (armed ? onConfirm() : setArmed(true))}
+      className={`h-full rounded-xl px-2 text-[1.1em] font-semibold ${armed ? 'bg-blood text-bone' : className}`}
+      onClick={() => (buzz(), armed ? onConfirm() : setArmed(true))}
     >
       {armed ? `${label}?` : label}
     </button>
   );
 }
 
+/** A number with − on the left half and + on the right, the same as the life total on the table. */
 function Tile({
   label,
   who,
   value,
   lethal,
   stripe,
+  art,
   onPlus,
   onMinus,
 }: {
@@ -813,25 +865,35 @@ function Tile({
   value: number;
   lethal: boolean;
   stripe: string[];
+  art?: string;
   onPlus: () => void;
   onMinus: () => void;
 }) {
   return (
-    <div className={`relative flex min-h-0 overflow-hidden rounded-lg bg-felt-3 ${lethal ? 'ring-2 ring-blood' : ''}`}>
+    <div className={`relative flex min-h-0 overflow-hidden rounded-xl bg-felt-3 ${lethal ? 'ring-2 ring-blood' : ''}`}>
+      {art && (
+        <>
+          <div className="art" style={{ backgroundImage: `url("${art}")` }} />
+          <div className="absolute inset-0 bg-black/60" />
+        </>
+      )}
       <div className="absolute inset-x-0 top-0 flex h-[3px]">
         {stripe.map((c, i) => (
           <div key={i} className="flex-1" style={{ background: c }} />
         ))}
       </div>
-      <button onClick={() => (buzz(), onPlus())} className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 pt-1" aria-label={`Add ${label}`}>
-        <span className="w-full truncate text-center font-semibold leading-tight">{label}</span>
-        <span className="w-full truncate text-center text-[0.8em] text-dim">{who}</span>
-        <span className={`font-cond font-bold leading-none tabular-nums ${lethal ? 'text-blood' : ''}`} style={{ fontSize: '2.6em' }}>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-[2.2em] text-center">
+        <span className="w-full truncate font-semibold leading-tight">{label}</span>
+        <span className="w-full truncate text-[0.8em] text-bone/60">{who}</span>
+        <span className={`font-cond font-bold leading-none tabular-nums ${lethal ? 'text-blood' : ''}`} style={{ fontSize: '2.8em' }}>
           {value}
         </span>
+      </div>
+      <button onClick={() => (buzz(), onMinus())} className="half flex-1" aria-label={`Remove ${label}`}>
+        <span className="glyph absolute top-1/2 left-[0.5em] -translate-y-1/2 font-cond text-[1.8em] text-bone/40">−</span>
       </button>
-      <button onClick={() => (buzz(), onMinus())} className="w-[30%] max-w-12 border-l border-line/60 font-cond text-[1.6em] text-dim" aria-label={`Remove ${label}`}>
-        −
+      <button onClick={() => (buzz(), onPlus())} className="half flex-1" aria-label={`Add ${label}`}>
+        <span className="glyph absolute top-1/2 right-[0.5em] -translate-y-1/2 font-cond text-[1.8em] text-bone/40">+</span>
       </button>
     </div>
   );

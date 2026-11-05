@@ -11,6 +11,7 @@ import { Crown } from '../components/icons';
 import CardName from '../components/CardName';
 import { useStore } from '../store';
 import { recapText } from '../recap';
+import { starReasons } from '../game';
 import { useState } from 'react';
 
 export default function GameDetail() {
@@ -18,6 +19,8 @@ export default function GameDetail() {
   const nav = useNavigate();
   const g = useLiveQuery(() => db.games.get(id ?? ''), [id]);
   const { game: live, start } = useStore();
+  // whose * reasons are showing
+  const [why, setWhy] = useState<number | null>(null);
 
   if (g === undefined) return <Page title="Game" back="/history">{null}</Page>;
   if (!g) return <Page title="Game not found" back="/history"><p className="text-dim">This game was deleted.</p></Page>;
@@ -82,22 +85,52 @@ export default function GameDetail() {
             {/* the end-of-game numbers sit in one row of small tiles */}
             {(() => {
               const nums: [string, number][] = [];
+              const reasons = starReasons(g.events, p.seat);
               if (!g.imported) {
                 nums.push(['Life', p.finalLife], ['Poison', p.finalPoison]);
                 if (g.format === 'commander') nums.push(['Cmdr dmg', p.cmdrDamageTaken]);
               }
               const extra = g.config.extraCounter;
-              if (extra && p.finalExtra != null) nums.push([extra === '*' ? '* Misplays' : extra, p.finalExtra]);
+              const starKey = extra === '*' ? '* Misplays' : extra;
+              if (extra && p.finalExtra != null) nums.push([starKey!, p.finalExtra]);
               if (!nums.length) return null;
+              // the * tile opens the reasons; games from before reasons existed have none to show
+              const canWhy = reasons.some((r) => r.note);
+              const open = canWhy && why === p.seat;
               return (
-                <dl className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${nums.length}, minmax(0, 1fr))` }}>
-                  {nums.map(([k, v]) => (
-                    <div key={k} className="flex flex-col-reverse rounded-lg bg-white/[.04] px-2 py-1.5 text-center">
-                      <dt className="truncate text-[11px] text-dim">{k}</dt>
-                      <dd className="font-cond text-xl font-bold leading-tight tabular-nums">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <>
+                  <dl className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${nums.length}, minmax(0, 1fr))` }}>
+                    {nums.map(([k, v]) =>
+                      k === starKey && canWhy ? (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setWhy(open ? null : p.seat)}
+                          aria-expanded={open}
+                          className={`flex flex-col-reverse rounded-lg px-2 py-1.5 text-center transition ${open ? 'bg-brass/20 ring-1 ring-brass/60' : 'bg-white/[.04] ring-1 ring-brass/30'}`}
+                        >
+                          <dt className="truncate text-[11px] text-brass">{k} ›</dt>
+                          <dd className="font-cond text-xl font-bold leading-tight tabular-nums">{v}</dd>
+                        </button>
+                      ) : (
+                        <div key={k} className="flex flex-col-reverse rounded-lg bg-white/[.04] px-2 py-1.5 text-center">
+                          <dt className="truncate text-[11px] text-dim">{k}</dt>
+                          <dd className="font-cond text-xl font-bold leading-tight tabular-nums">{v}</dd>
+                        </div>
+                      ),
+                    )}
+                  </dl>
+                  {open && (
+                    <ul className="mt-2 flex flex-col gap-1 rounded-lg bg-white/[.04] px-3 py-2 text-sm">
+                      {reasons.map((r, i) => (
+                        <li key={i} className="flex justify-between gap-3">
+                          <span>{r.note ?? 'No reason given'}</span>
+                          <span className="text-dim">round {r.round}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               );
             })()}
           </div>
