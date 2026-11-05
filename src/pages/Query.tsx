@@ -119,7 +119,7 @@ export default function Query() {
                               <button
                                 key={v}
                                 onClick={() => setView(v)}
-                                className={`rounded-full px-3 py-1 ${view === v ? 'bg-bone font-semibold text-felt' : 'text-dim'}`}
+                                className={`rounded-full px-3 py-1 ${view === v ? 'bg-brass font-semibold text-felt' : 'text-dim'}`}
                               >
                                 {v === 'chart' ? 'Graph' : 'Table'}
                               </button>

@@ -170,7 +170,7 @@ export function Segmented<T extends string | number>({
           aria-checked={value === o.v}
           onClick={() => onChange(o.v)}
           className={`flex-1 rounded-full px-2 py-2 text-sm transition ${
-            value === o.v ? 'bg-bone font-semibold text-felt shadow' : 'text-dim hover:text-bone'
+            value === o.v ? 'bg-brass font-semibold text-felt shadow' : 'text-dim hover:text-bone'
           }`}
         >
           {o.label}

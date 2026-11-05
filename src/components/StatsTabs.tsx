@@ -8,7 +8,7 @@ export default function StatsTabs({ active }: { active: 'stats' | 'games' }) {
       replace
       aria-current={on ? 'page' : undefined}
       className={`flex-1 rounded-full px-2 py-2 text-center text-sm transition ${
-        on ? 'bg-bone font-semibold text-felt shadow' : 'text-dim hover:text-bone'
+        on ? 'bg-brass font-semibold text-felt shadow' : 'text-dim hover:text-bone'
       }`}
     >
       {label}
