@@ -68,13 +68,13 @@ export default function Stats() {
 
   if (all === undefined)
     return (
-      <Page title="Stats">
+      <Page title="Game history">
         <StatsTabs active="stats" />
       </Page>
     );
 
   return (
-    <Page title="Stats">
+    <Page title="Game history">
       <StatsTabs active="stats" />
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Select

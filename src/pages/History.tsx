@@ -32,7 +32,7 @@ export default function History() {
   };
 
   return (
-    <Page title="Stats">
+    <Page title="Game history">
       <StatsTabs active="games" />
       <div className="mb-4 flex gap-2">
         <Btn onClick={doExport} disabled={!games?.length} className="flex-1 text-sm">
