@@ -43,27 +43,3 @@ export const defaultLayout = (players: number, orientation: Orientation) =>
   layoutsFor(players, orientation)[0];
 
 export const seatLetter = (seat: number) => String.fromCharCode(97 + seat);
-
-/** Where a seat sits, in plain words, for the setup screen. */
-export function seatPosition(layout: Layout, seat: number): string {
-  const ch = seatLetter(seat);
-  const rows = layout.areas.map((r) => r.split(' '));
-  const h = rows.length;
-  const w = rows[0].length;
-  let rs: number[] = [];
-  let cs: number[] = [];
-  rows.forEach((r, ri) =>
-    r.forEach((c, ci) => {
-      if (c === ch) {
-        rs.push(ri);
-        cs.push(ci);
-      }
-    }),
-  );
-  const rm = (Math.min(...rs) + Math.max(...rs)) / 2;
-  const cm = (Math.min(...cs) + Math.max(...cs)) / 2;
-  const v = rm < (h - 1) / 2 - 0.01 ? 'Top' : rm > (h - 1) / 2 + 0.01 ? 'Bottom' : 'Middle';
-  const hz = cm < (w - 1) / 2 - 0.01 ? 'left' : cm > (w - 1) / 2 + 0.01 ? 'right' : '';
-  if (v === 'Middle') return hz ? hz[0].toUpperCase() + hz.slice(1) + ' middle' : 'Middle';
-  return hz ? `${v} ${hz}` : `${v} end`;
-}

@@ -160,7 +160,7 @@ export default function NewGame() {
         skip={!game}
         onConfirm={() => begin()}
         confirmLabel="Tap again to drop the unfinished game"
-        className="mt-5 w-full !rounded-2xl py-4 font-cond text-3xl font-bold shadow-[0_10px_30px_-10px_rgba(255,163,26,.6)]"
+        className="mt-5 w-full !rounded-2xl py-4 font-cond text-3xl font-bold"
       >
         Start game
       </ConfirmBtn>
@@ -205,7 +205,7 @@ function Choice<T extends string>({
             aria-checked={on}
             onClick={() => onChange(o.v)}
             className={`rounded-2xl px-4 py-3 text-left transition active:scale-[.98] ${
-              on ? 'bg-brass text-felt shadow-[0_8px_24px_-12px_rgba(255,163,26,.8)]' : 'bg-white/[.05] text-bone hover:bg-white/[.08]'
+              on ? 'bg-brass text-felt' : 'bg-white/[.05] text-bone hover:bg-white/[.08]'
             }`}
           >
             <span className="block font-cond text-2xl font-bold leading-tight">{o.title}</span>

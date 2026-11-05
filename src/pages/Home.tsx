@@ -18,7 +18,7 @@ export default function Home() {
   const syncOn = !!getSync();
 
   return (
-    <div className="home-glow min-h-full">
+    <div className="min-h-full">
       <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pt-[calc(9vh+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
         <Logo />
 
@@ -142,7 +142,7 @@ function BigLink({ to, children, sub, tag, primary = false }: { to: string; chil
       to={to}
       className={`flex items-center gap-3 rounded-2xl px-5 py-[1.1rem] transition active:scale-[.98] ${
         primary
-          ? 'bg-brass text-felt shadow-[0_10px_30px_-10px_rgba(255,163,26,.6)] hover:bg-brass-2'
+          ? 'bg-brass text-felt hover:bg-brass-2'
           : 'bg-felt-2/90 text-bone ring-1 ring-white/[.05] hover:bg-felt-3'
       }`}
     >

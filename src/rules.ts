@@ -139,5 +139,3 @@ function build(data: RulesData): RulesDb {
 
 /** "702.19b" -> "702.19", "702.19" -> "702" */
 export const parentOf = (n: string) => (/[a-z]$/.test(n) ? n.slice(0, -1) : n.includes('.') ? n.split('.')[0] : n);
-
-export const RULE_REF = /\b(\d{3}(?:\.\d+[a-z]?)?)\b/g;

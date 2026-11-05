@@ -125,18 +125,6 @@ export function byTurnOrder(games: GameRecord[]): Row[] {
   return [...finish(m)].sort((a, b) => Number(a.key) - Number(b.key));
 }
 
-export function byColor(games: GameRecord[]): Row[] {
-  const name: Record<Mana, string> = { W: 'Plays white', U: 'Plays blue', B: 'Plays black', R: 'Plays red', G: 'Plays green' };
-  const m = tally(
-    games,
-    (p) => (p.colors.length ? p.colors : ['C']),
-    (k) => name[k as Mana] ?? 'Colorless decks',
-  );
-  for (const r of m.values()) r.colors = r.key === 'C' ? [] : [r.key as Mana];
-  const order = [...MANA, 'C'];
-  return [...finish(m)].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
-}
-
 /** names for every color identity, keyed in WUBRG order */
 export const IDENTITY_NAMES: Record<string, string> = {
   '': 'Colorless',
@@ -161,12 +149,6 @@ export function byIdentity(games: GameRecord[]): Row[] {
 export function byColorCount(games: GameRecord[]): Row[] {
   const label = ['Colorless', 'Mono', 'Two colors', 'Three colors', 'Four colors', 'Five colors'];
   const m = tally(games, (p) => String(p.colors.length), (k) => label[Number(k)]);
-  return [...finish(m)].sort((a, b) => Number(a.key) - Number(b.key));
-}
-
-export function byBracket(games: GameRecord[]): Row[] {
-  const label = ['Precon', '1 Exhibition', '2 Core', '3 Upgraded', '4 Optimized', '5 cEDH'];
-  const m = tally(games, (p) => (p.bracket == null ? null : String(p.bracket)), (k) => label[Number(k)]);
   return [...finish(m)].sort((a, b) => Number(a.key) - Number(b.key));
 }
 
