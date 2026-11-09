@@ -32,6 +32,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // push notification handlers live in public/push-sw.js
+        importScripts: ['push-sw.js'],
         // the SQL engine (wasm) is only for Query, so it's cached the first time Query opens
         // instead of on install; everything else, rules included, works offline from the start
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
