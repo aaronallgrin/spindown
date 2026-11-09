@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useStore } from '../store';
 import { getSync } from '../sync';
-import { Ask, Cloud, Gavel } from '../components/icons';
+import { Cloud } from '../components/icons';
 import { D20 } from '../ui';
 import AppQr from '../components/AppQr';
 import { needsNames } from '../game';
@@ -71,27 +71,6 @@ export default function Home() {
             Game history
           </BigLink>
         </div>
-
-        <nav className="mt-3 grid grid-cols-2 gap-2.5">
-          {[
-            { to: '/judge', title: 'Ask a Judge', sub: 'Rules, rulings', icon: <Gavel /> },
-            { to: '/query', title: 'Query', sub: 'Ask your games', icon: <Ask /> },
-          ].map((t) => (
-            <Link
-              key={t.to}
-              to={t.to}
-              className="group flex items-center gap-3 rounded-2xl bg-felt-2/80 px-3.5 py-3 ring-1 ring-white/[.05] transition hover:bg-felt-3"
-            >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[.06] text-brass transition group-hover:bg-brass group-hover:text-felt">
-                {t.icon}
-              </span>
-              <span className="min-w-0">
-                <span className="block font-cond text-lg leading-tight font-bold">{t.title}</span>
-                <span className="block truncate text-xs text-dim">{t.sub}</span>
-              </span>
-            </Link>
-          ))}
-        </nav>
 
         {!installed && (
           <p className="mt-3 rounded-2xl border border-brass/30 bg-brass/10 px-4 py-3 text-sm">
