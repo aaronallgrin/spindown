@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import CommanderPicker from './CommanderPicker';
 import { getCard } from '../scryfall';
 import { deckKey, usePlayerMemory } from './usePlayerMemory';
-import { BRACKETS, deckFields, sharedDeck, type Format, type Mana, type PlayerSetup } from '../types';
+import { BRACKETS, PAUPER_EDH, deckFields, sharedDeck, type Format, type Mana, type PlayerSetup } from '../types';
 import { Btn, ManaPicker, Pips, Segmented, sortMana } from '../ui';
 
 /**
@@ -221,6 +221,8 @@ export default function SeatEditor({
                 onChange={(c) => set({ partner: c })}
               />
             )}
+            {/* brackets don't apply to Pauper Commander */}
+            {subFormat !== PAUPER_EDH && (
             <div>
               <div className="mb-1.5 text-sm text-dim">Bracket</div>
               <Segmented
@@ -238,6 +240,7 @@ export default function SeatEditor({
                 }))}
               />
             </div>
+            )}
           </>
         ) : shared ? (
           <div className="flex items-center gap-3 rounded-lg bg-felt-2 px-3 py-3">
