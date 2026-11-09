@@ -8,7 +8,7 @@ import { Cloud } from '../components/icons';
 import { D20 } from '../ui';
 import AppQr from '../components/AppQr';
 import { needsNames } from '../game';
-import { FALLING, seasonOf } from '../season';
+import { THEMES, themesOn, type Look } from '../season';
 
 export default function Home() {
   const { game, lastConfig, start } = useStore();
@@ -116,36 +116,54 @@ export default function Home() {
 const installed =
   window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
-/** Snow in winter, leaves in fall, petals in spring, nothing in summer. Decoration only. */
+/** Snow, leaves, petals, fireflies, or the day's holiday. Decoration only. */
 function SeasonFx() {
-  // laid out once per visit to Home
+  // laid out once per visit to Home; overlapping holidays take turns particle by particle
   const [bits] = useState(() => {
-    const look = FALLING[seasonOf(new Date())];
-    return look
-      ? Array.from({ length: look.count }, (_, i) => {
-          const size = look.size[0] + Math.random() * (look.size[1] - look.size[0]);
-          return {
-            left: `${Math.random() * 100}%`,
-            width: size,
-            height: look.leaf ? size * 0.6 : size,
-            background: look.colors[i % look.colors.length],
-            borderRadius: look.leaf ? '0 70% 0 70%' : '50%',
-            opacity: 0.2 + Math.random() * 0.35,
-            animationDuration: `${10 + Math.random() * 12}s`,
-            animationDelay: `-${Math.random() * 22}s`,
-            '--drift': `${Math.round(Math.random() * 80 - 40)}px`,
-          } as CSSProperties;
-        })
-      : [];
+    const looks = themesOn(new Date()).map((t) => THEMES[t]);
+    const count = Math.max(...looks.map((l) => l.count));
+    return Array.from({ length: count }, (_, i) => {
+      const look: Look = looks[i % looks.length];
+      const size = look.size[0] + Math.random() * (look.size[1] - look.size[0]);
+      const color = look.colors[Math.floor(Math.random() * look.colors.length)];
+      const heart = look.shape === 'heart';
+      return {
+        glyph: heart ? '♥' : '',
+        style: {
+          left: `${Math.random() * 100}%`,
+          width: heart ? undefined : size,
+          height: heart ? undefined : look.shape === 'leaf' ? size * 0.6 : look.shape === 'egg' ? size * 1.3 : size,
+          fontSize: heart ? size : undefined,
+          lineHeight: heart ? 1 : undefined,
+          color,
+          background: heart ? undefined : color,
+          borderRadius: SHAPE_RADIUS[look.shape],
+          boxShadow: look.shape === 'glow' ? `0 0 6px 1px ${color}` : undefined,
+          opacity: 0.2 + Math.random() * 0.35,
+          animationDuration: `${(look.slow ? 18 : 10) + Math.random() * 12}s`,
+          animationDelay: `-${Math.random() * 22}s`,
+          '--drift': `${Math.round(Math.random() * 80 - 40)}px`,
+        } as CSSProperties,
+      };
+    });
   });
   return (
     <div aria-hidden className="season-fx pointer-events-none fixed inset-0 overflow-hidden">
-      {bits.map((style, i) => (
-        <i key={i} style={style} />
+      {bits.map((b, i) => (
+        <i key={i} style={b.style}>
+          {b.glyph}
+        </i>
       ))}
     </div>
   );
 }
+const SHAPE_RADIUS: Record<Look['shape'], string | undefined> = {
+  dot: '50%',
+  glow: '50%',
+  leaf: '0 70% 0 70%',
+  egg: '50% 50% 50% 50% / 60% 60% 40% 40%',
+  heart: undefined,
+};
 
 /** One of the big stacked buttons on Home. */
 function BigLink({ to, children, sub, tag, primary = false }: { to: string; children: ReactNode; sub?: string; tag?: string; primary?: boolean }) {
