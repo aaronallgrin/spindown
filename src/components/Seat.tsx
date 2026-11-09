@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { CMDR_LETHAL, POISON_LETHAL, lethalCause, type Action } from '../game';
+import { cmdrLethal, POISON_LETHAL, lethalCause, type Action } from '../game';
 import type { Rot } from '../layouts';
 import { DANDAN_MARKS, isDandan, type LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
@@ -48,7 +48,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
     !p.out &&
     !lethal &&
     (p.poison >= POISON_LETHAL - 2 ||
-      (isCmdr && cmdrMax >= CMDR_LETHAL - 5) ||
+      (isCmdr && cmdrMax >= cmdrLethal(game.config) - 5) ||
       p.life <= Math.max(3, Math.ceil(game.config.startingLife / 8)));
   const shown = useRolling(p.life);
   const flash = useFlash(p.life);
@@ -226,7 +226,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                     </Badge>
                   )}
                   {isCmdr && cmdrMax > 0 && (
-                    <Badge tone={cmdrMax >= CMDR_LETHAL - 5 ? 'hot' : 'cmdr'}>
+                    <Badge tone={cmdrMax >= cmdrLethal(game.config) - 5 ? 'hot' : 'cmdr'}>
                       <Sword size="1.05em" />
                       {cmdrMax}
                     </Badge>
@@ -738,7 +738,7 @@ function CounterPanel({
               <Sword size="1em" /> Commander damage
             </span>
             <span className="w-full truncate text-[0.8em] text-dim">{!worst ? 'Tap to pick a commander' : worst.who.startsWith('from') ? `Most ${worst.who}` : 'Most from your own commander'}</span>
-            <span className={`font-cond font-bold leading-none tabular-nums ${(worst?.v ?? 0) >= CMDR_LETHAL ? 'text-blood' : ''}`} style={{ fontSize: '2.8em' }}>
+            <span className={`font-cond font-bold leading-none tabular-nums ${(worst?.v ?? 0) >= cmdrLethal(game.config) ? 'text-blood' : ''}`} style={{ fontSize: '2.8em' }}>
               {worst?.v ?? 0}
             </span>
           </button>
@@ -815,7 +815,7 @@ function CmdrPanel({ game, seat, dispatch, done }: { game: LiveGame; seat: numbe
               label={s.label}
               who={s.who}
               value={v}
-              lethal={v >= CMDR_LETHAL}
+              lethal={v >= cmdrLethal(game.config)}
               stripe={s.colors}
               art={s.art}
               onPlus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: 1 })}

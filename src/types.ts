@@ -70,8 +70,10 @@ export interface PlayerSetup {
 
 export interface GameConfig {
   format: Format;
-  /** e.g. Modern, Draft; not used for Commander */
+  /** e.g. Modern, Draft; for Commander only set for Pauper Commander */
   subFormat?: string;
+  /** league or event this game counts toward, e.g. Pauper Secret Santa League */
+  league?: string;
   startingLife: number;
   orientation: Orientation;
   layoutId: string;
@@ -106,6 +108,8 @@ export const DANDAN_MARKS: { kind: DandanMark; label: string; who: string }[] = 
   { kind: 'dandanBlock', label: 'Dandân blocked Dandân', who: "this player's Dandân blocked" },
   { kind: 'diminishing', label: 'Diminishing Returns', who: 'cast by this player' },
 ];
+/** the Commander variant: 30 life, 16 commander damage kills (PDH Home Base rules) */
+export const PAUPER_EDH = 'Pauper Commander';
 export const isDandan = (c: GameConfig) => c.format === 'other' && c.subFormat === 'Dandân';
 
 export type EventKind = 'life' | 'poison' | 'cmdr' | 'extra' | 'monarch' | 'turn' | 'out' | 'win' | 'revive' | 'first' | 'egg' | DandanMark;

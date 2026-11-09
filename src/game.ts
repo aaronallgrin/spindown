@@ -11,21 +11,23 @@ import type {
   PlayerResult,
   PlayerSetup,
 } from './types';
-import { SUB_FORMATS, sharedDeck } from './types';
+import { PAUPER_EDH, SUB_FORMATS, sharedDeck } from './types';
 
 export const POISON_LETHAL = 10;
-export const CMDR_LETHAL = 21;
+/** commander damage that kills: 21, or 16 in Pauper Commander */
+export const cmdrLethal = (c: GameConfig) => (c.subFormat === PAUPER_EDH ? 16 : 21);
 
 export const blankSeat = (): PlayerSetup => ({ name: '', hasPartner: false, colors: [] });
 
 /** House rules: portrait table, commander damage takes life, the * misplay counter. */
 export function makeConfig(format: Format, subFormat: string | undefined, players: number, layoutId: string): GameConfig {
   const sub = format === 'commander' ? undefined : SUB_FORMATS[format].find((f) => f.name === subFormat);
+  const pauper = format === 'commander' && subFormat === PAUPER_EDH;
   return {
     format,
-    subFormat: sub?.name,
+    subFormat: pauper ? PAUPER_EDH : sub?.name,
     // Brawl: 25 life head to head, 30 in multiplayer (rule 119.1d)
-    startingLife: format === 'commander' ? 40 : sub?.name === 'Brawl' && players > 2 ? 30 : (sub?.life ?? 20),
+    startingLife: format === 'commander' ? (pauper ? 30 : 40) : sub?.name === 'Brawl' && players > 2 ? 30 : (sub?.life ?? 20),
     orientation: 'portrait',
     layoutId,
     players: Array.from({ length: players }, blankSeat),
@@ -96,7 +98,7 @@ export const alive = (g: LiveGame) => g.players.filter((p) => !p.out);
 export function lethalCause(g: LiveGame, p: LivePlayer): OutCause | null {
   if (p.out) return null;
   if (g.config.format === 'commander') {
-    if (Object.values(p.cmdr).some((v) => v >= CMDR_LETHAL)) return 'commander';
+    if (Object.values(p.cmdr).some((v) => v >= cmdrLethal(g.config))) return 'commander';
   }
   if (p.poison >= POISON_LETHAL) return 'poison';
   if (p.life <= 0) return 'life';
