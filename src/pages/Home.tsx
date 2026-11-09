@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from '../nav';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -8,6 +8,7 @@ import { Ask, Cloud, Gavel } from '../components/icons';
 import { D20 } from '../ui';
 import AppQr from '../components/AppQr';
 import { needsNames } from '../game';
+import { FALLING, seasonOf } from '../season';
 
 export default function Home() {
   const { game, lastConfig, start } = useStore();
@@ -18,8 +19,9 @@ export default function Home() {
   const syncOn = !!getSync();
 
   return (
-    <div className="min-h-full">
-      <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pt-[calc(9vh+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
+    <div className="relative min-h-full">
+      <SeasonFx />
+      <div className="relative mx-auto flex min-h-full max-w-md flex-col px-5 pt-[calc(9vh+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
         <Logo />
 
         <div className="mt-10 flex flex-col gap-3">
@@ -134,6 +136,37 @@ export default function Home() {
 // running from the home screen icon rather than a browser tab
 const installed =
   window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+
+/** Snow in winter, leaves in fall, petals in spring, nothing in summer. Decoration only. */
+function SeasonFx() {
+  // laid out once per visit to Home
+  const [bits] = useState(() => {
+    const look = FALLING[seasonOf(new Date())];
+    return look
+      ? Array.from({ length: look.count }, (_, i) => {
+          const size = look.size[0] + Math.random() * (look.size[1] - look.size[0]);
+          return {
+            left: `${Math.random() * 100}%`,
+            width: size,
+            height: look.leaf ? size * 0.6 : size,
+            background: look.colors[i % look.colors.length],
+            borderRadius: look.leaf ? '0 70% 0 70%' : '50%',
+            opacity: 0.2 + Math.random() * 0.35,
+            animationDuration: `${10 + Math.random() * 12}s`,
+            animationDelay: `-${Math.random() * 22}s`,
+            '--drift': `${Math.round(Math.random() * 80 - 40)}px`,
+          } as CSSProperties;
+        })
+      : [];
+  });
+  return (
+    <div aria-hidden className="season-fx pointer-events-none fixed inset-0 overflow-hidden">
+      {bits.map((style, i) => (
+        <i key={i} style={style} />
+      ))}
+    </div>
+  );
+}
 
 /** One of the big stacked buttons on Home. */
 function BigLink({ to, children, sub, tag, primary = false }: { to: string; children: ReactNode; sub?: string; tag?: string; primary?: boolean }) {

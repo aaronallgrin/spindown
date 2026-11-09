@@ -373,3 +373,16 @@ html.table-lock body {
 .bubble-r {
   animation: bubbleIn 320ms ease-out 1300ms both;
 }
+
+/* seasonal particles behind Home (snow, leaves, petals) */
+.season-fx i {
+  position: absolute;
+  top: -12px;
+  animation: seasonFall linear infinite;
+}
+@keyframes seasonFall {
+  to { transform: translate(var(--drift), 105vh) rotate(300deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .season-fx { display: none; }
+}
