@@ -7,6 +7,8 @@ export const THEMES = {
   spring: { count: 12, colors: ['#f4c6d6', '#ffffff'], size: [4, 6], shape: 'leaf' },
   summer: { count: 14, colors: ['#ffe27a'], size: [2, 4], shape: 'glow', slow: true }, // fireflies
   fall: { count: 14, colors: ['#c0602a', '#ffa31a', '#8a3b1c'], size: [6, 9], shape: 'leaf' },
+  halloween: { count: 18, colors: ['#ff7a1a', '#9b59d0', '#7fd65a'], size: [2, 4], shape: 'glow', slow: true }, // embers
+  july4: { count: 30, colors: ['#e0453a', '#ffffff', '#4a7fe0'], size: [2, 4], shape: 'glow' }, // sparks
   valentines: { count: 16, colors: ['#e8476b', '#f4a3b8'], size: [10, 16], shape: 'heart' },
   easter: { count: 12, colors: ['#f7d6e0', '#cfe8f7', '#fff3b0', '#d4f0c8', '#e3d4f5'], size: [7, 10], shape: 'egg' },
   passover: { count: 18, colors: ['#e8c26a', '#ffffff'], size: [2, 4], shape: 'glow' },
@@ -59,6 +61,8 @@ export function themesOn(d: Date): Theme[] {
   const e = easter(d.getFullYear());
   const on: Theme[] = [];
   if (n === 214) on.push('valentines');
+  if (n === 704) on.push('july4');
+  if (n === 1031) on.push('halloween');
   if (d.getMonth() === e.getMonth() && d.getDate() === e.getDate()) on.push('easter');
   if (eightDaysFrom(d, 'Nisan', 15)) on.push('passover');
   if (eightDaysFrom(d, 'Kislev', 25)) on.push('hanukkah');
