@@ -7,6 +7,7 @@ import { getSync } from '../sync';
 import { Cloud } from '../components/icons';
 import { D20 } from '../ui';
 import AppQr from '../components/AppQr';
+import PhoneSheet from '../components/PhoneSheet';
 import { needsNames } from '../game';
 import { THEMES, themesOn, type Look } from '../season';
 
@@ -102,7 +103,9 @@ export default function Home() {
           </div>
         )}
 
-        <footer className="mt-auto flex items-center justify-center gap-1 pt-12 text-xs text-dim">
+        <footer className="mt-auto flex flex-wrap items-center justify-center gap-1 pt-12 text-xs text-dim">
+          <PhoneSheet />
+          <span aria-hidden>·</span>
           <About />
           <span aria-hidden>·</span>
           <VersionButton />
