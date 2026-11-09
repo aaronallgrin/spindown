@@ -65,7 +65,7 @@ export default function History() {
               <span className="shrink-0 text-sm text-dim">{fmtDate(g.startedAt)}</span>
             </div>
             <div className="mb-2 text-sm text-dim">
-              {g.config.subFormat ?? fmtLabel[g.format]}, {g.playerCount} players, {g.rounds ? `${g.rounds} ${g.rounds === 1 ? 'round' : 'rounds'}, ` : ''}{g.imported ? 'from the old spreadsheet' : `${g.durationMin} min`}
+              {g.config.subFormat ?? fmtLabel[g.format]}, {g.config.league ? `${g.config.league}, ` : ''}{g.playerCount} players, {g.rounds ? `${g.rounds} ${g.rounds === 1 ? 'round' : 'rounds'}, ` : ''}{g.imported ? 'from the old spreadsheet' : `${g.durationMin} min`}
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
               {[...g.players]

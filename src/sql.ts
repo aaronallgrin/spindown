@@ -16,7 +16,7 @@ async function engine() {
   return SQL;
 }
 
-export const SCHEMA = `games(id, date, format, sub_format, players, rounds, minutes, winner)
+export const SCHEMA = `games(id, date, format, sub_format, league, players, rounds, minutes, winner)
 players(game_id, date, format, sub_format, name, seat, turn_order, place, result, won,
         commander, partner, deck, theme, colors, identity, color_count, bracket,
         out_round, out_cause, final_life, poison, cmdr_damage_taken, misplays)
@@ -31,7 +31,7 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
   const S = await engine();
   const d = new S.Database();
   d.run(`
-    CREATE TABLE games(id TEXT PRIMARY KEY, date TEXT, format TEXT, sub_format TEXT, players INT, rounds INT, minutes INT, winner TEXT);
+    CREATE TABLE games(id TEXT PRIMARY KEY, date TEXT, format TEXT, sub_format TEXT, league TEXT, players INT, rounds INT, minutes INT, winner TEXT);
     CREATE TABLE players(game_id TEXT, date TEXT, format TEXT, sub_format TEXT, name TEXT, seat INT, turn_order INT, place INT,
       result TEXT, won INT, commander TEXT, partner TEXT, deck TEXT, theme TEXT, colors TEXT, identity TEXT, color_count INT, bracket TEXT,
       out_round INT, out_cause TEXT, final_life INT, poison INT, cmdr_damage_taken INT, misplays INT);
@@ -41,13 +41,13 @@ export async function buildDb(games: GameRecord[]): Promise<Database> {
   `);
   const ri = d.prepare('INSERT INTO rounds VALUES (?,?,?,?,?)');
   const ti = d.prepare('INSERT INTO trophies VALUES (?,?,?,?)');
-  const gi = d.prepare('INSERT INTO games VALUES (?,?,?,?,?,?,?,?)');
+  const gi = d.prepare('INSERT INTO games VALUES (?,?,?,?,?,?,?,?,?)');
   const pi = d.prepare('INSERT INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
   const ei = d.prepare('INSERT INTO events VALUES (?,?,?,?,?,?,?,?)');
   d.run('BEGIN');
   for (const g of games) {
     const sub = g.config.subFormat ?? (g.format === 'commander' ? 'Commander' : null);
-    gi.run([g.id, day(g.startedAt), g.format, sub, g.playerCount, g.rounds || null, g.imported ? null : g.durationMin, g.winnerName]);
+    gi.run([g.id, day(g.startedAt), g.format, sub, g.config.league ?? null, g.playerCount, g.rounds || null, g.imported ? null : g.durationMin, g.winnerName]);
     const pl = places(g);
     const nameOf = (seat?: number) => (seat == null || seat < 0 ? null : g.players.find((p) => p.seat === seat)?.name ?? null);
     for (const p of g.players)

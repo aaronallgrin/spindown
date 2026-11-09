@@ -203,3 +203,20 @@ describe('recap', () => {
     expect(text.endsWith('Tracked with Spindown https://x.test')).toBe(true);
   });
 });
+
+describe('Pauper Commander', () => {
+  it('starts at 30 and dies to 16 commander damage', () => {
+    const c = makeConfig('commander', 'Pauper Commander', 4, 'p4-sides');
+    expect(c.startingLife).toBe(30);
+    const g = newGame(c);
+    const p = { ...g.players[0], cmdr: { '1:0': 15 } };
+    expect(lethalCause(g, p)).toBe(null);
+    expect(lethalCause(g, { ...p, cmdr: { '1:0': 16 } })).toBe('commander');
+  });
+  it('leaves regular Commander at 40 and 21', () => {
+    const c = makeConfig('commander', undefined, 4, 'p4-sides');
+    const g = newGame(c);
+    expect(c.startingLife).toBe(40);
+    expect(lethalCause(g, { ...g.players[0], cmdr: { '1:0': 16 } })).toBe(null);
+  });
+});

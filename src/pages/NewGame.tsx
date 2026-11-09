@@ -3,7 +3,9 @@ import { useNavigate } from '../nav';
 import { useStore } from '../store';
 import { makeConfig, quickName } from '../game';
 import { defaultLayout, layoutsFor } from '../layouts';
-import { SUB_FORMATS, type Format } from '../types';
+import { PAUPER_EDH, SUB_FORMATS, type Format } from '../types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db';
 import ConfirmBtn from '../components/ConfirmBtn';
 import SeatMap from '../components/SeatMap';
 import { usePress } from '../components/usePress';
@@ -17,6 +19,10 @@ type Prefs = {
   other: { format: Exclude<Format, 'commander'>; sub: string };
   players: number;
   layoutId: string;
+  /** Commander only: Pauper Commander instead of regular */
+  pauper?: boolean;
+  /** league or event the next games count toward; stays until cleared */
+  league?: string;
 };
 
 const DEFAULTS: Prefs = { kind: 'commander', other: { format: 'constructed', sub: 'Standard' }, players: 4, layoutId: 'p4-sides' };
@@ -44,6 +50,7 @@ export default function NewGame() {
   const layouts = layoutsFor(prefs.players, 'portrait');
   const commonCount = prefs.kind === 'commander' ? 4 : 2;
   const [pickCount, setPickCount] = useState(prefs.players !== commonCount);
+  const pastLeagues = useLiveQuery(async () => [...new Set((await db.games.toArray()).map((g) => g.config.league).filter(Boolean))], []);
 
   const update = (patch: Partial<Prefs>) => {
     const next = { ...prefs, ...patch };
@@ -64,7 +71,9 @@ export default function NewGame() {
   const begin = (quick = false) => {
     if (game) discard();
     const format: Format = prefs.kind === 'commander' ? 'commander' : prefs.other.format;
-    const config = makeConfig(format, prefs.kind === 'commander' ? undefined : prefs.other.sub, prefs.players, prefs.layoutId);
+    const sub = prefs.kind === 'commander' ? (prefs.pauper ? PAUPER_EDH : undefined) : prefs.other.sub;
+    const config = makeConfig(format, sub, prefs.players, prefs.layoutId);
+    if (prefs.league?.trim()) config.league = prefs.league.trim();
     // quick start: no names yet, everyone gets asked at the end
     if (quick) config.players = config.players.map((p, i) => ({ ...p, name: quickName(i) }));
     start(config);
@@ -79,10 +88,31 @@ export default function NewGame() {
         value={prefs.kind}
         onChange={(kind) => update({ kind })}
         options={[
-          { v: 'commander', title: 'Commander', sub: 'EDH' },
+          { v: 'commander', title: 'Commander', sub: prefs.pauper ? 'Pauper' : 'EDH' },
           { v: 'other', title: 'Other', sub: prefs.kind === 'other' ? prefs.other.sub : 'Constructed, draft, more' },
         ]}
       />
+      {prefs.kind === 'commander' && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {[
+            { pauper: false, name: 'Regular' },
+            { pauper: true, name: 'Pauper' },
+          ].map((o) => (
+            <button
+              key={o.name}
+              type="button"
+              aria-pressed={!!prefs.pauper === o.pauper}
+              onClick={() => update({ pauper: o.pauper })}
+              className={`rounded-full px-3.5 py-1.5 text-sm transition ${
+                !!prefs.pauper === o.pauper ? 'bg-brass font-semibold text-felt' : 'bg-white/[.06] text-bone/85 hover:bg-white/10'
+              }`}
+            >
+              {o.name}
+            </button>
+          ))}
+          <span className="px-1 text-xs text-dim">{prefs.pauper ? '30 life, 16 commander damage' : '40 life, 21 commander damage'}</span>
+        </div>
+      )}
       {prefs.kind === 'other' && (
         <div className="mt-3 flex flex-col gap-2.5">
           {GROUPS.map((g) => (
@@ -154,6 +184,24 @@ export default function NewGame() {
           <SeatPills layouts={layouts} value={prefs.layoutId} onChange={(layoutId) => update({ layoutId })} />
         </>
       )}
+
+      <Label className="mt-5">League or event (optional)</Label>
+      <div className="flex gap-2">
+        <input
+          value={prefs.league ?? ''}
+          onChange={(e) => update({ league: e.target.value })}
+          list="past-leagues"
+          maxLength={40}
+          placeholder="Like Pauper Secret Santa League"
+          className="min-w-0 flex-1 rounded-xl bg-white/[.06] px-3.5 py-2.5 text-bone placeholder:text-dim"
+        />
+        {prefs.league && (
+          <button type="button" onClick={() => update({ league: '' })} className="rounded-xl bg-white/[.06] px-3 text-sm text-dim">
+            Clear
+          </button>
+        )}
+      </div>
+      <datalist id="past-leagues">{pastLeagues?.map((l) => <option key={l} value={l} />)}</datalist>
 
       <ConfirmBtn
         variant="primary"
