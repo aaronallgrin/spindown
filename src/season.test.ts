@@ -22,6 +22,9 @@ describe('holidays', () => {
   });
   it('picks the holiday over the season', () => {
     expect(themesOn(day(2027, 2, 14))).toEqual(['valentines']);
+    expect(themesOn(day(2027, 7, 4))).toEqual(['july4']);
+    expect(themesOn(day(2027, 10, 31))).toEqual(['halloween']);
+    expect(themesOn(day(2027, 11, 1))).toEqual(['fall']);
     expect(themesOn(day(2027, 3, 28))).toEqual(['easter']);
     expect(themesOn(day(2026, 12, 24))).toEqual(['christmas']);
     expect(themesOn(day(2026, 12, 30))).toEqual(['kwanzaa']);
