@@ -7,7 +7,8 @@
 import { buildPushHTTPRequest } from 'npm:@pushforge/builder@2';
 
 const URL_ = Deno.env.get('SUPABASE_URL')!;
-const KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// the table is group-readable, so either key works
+const KEY = (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY'))!;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'apikey, authorization, content-type',
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
       const { endpoint, headers, body } = await buildPushHTTPRequest({
         privateJWK,
         subscription: s.sub,
-        message: { payload: p.msg(s), adminContact: 'mailto:aaronallgrin@users.noreply.github.com', options: { ttl: 86400 } },
+        message: { payload: p.msg(s), adminContact: 'mailto:aaronallgrin@users.noreply.github.com' },
       });
       const r = await fetch(endpoint, { method: 'POST', headers, body });
       if (r.ok) sent++;
