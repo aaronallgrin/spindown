@@ -8,6 +8,7 @@ import { cloud } from './push';
 import type { GameRecord } from './types';
 
 export const EXCHANGE = '2026';
+export const SIGNUPS_CLOSE = '2026-11-19'; // last day to sign up (also enforced in santa.sql)
 export const MIN_DRAW = 3; // fewer than this and the loop is pointless
 export const SANTA_PLAYERS = // quick picks on sign-up; anyone else types their name
   ['Aaron', 'Andrew', 'Chris', 'Cody', 'Colin', 'Josh', 'Marion', 'Tim'];
@@ -85,6 +86,7 @@ export function notify(kind: string) {
 
 /** 'YYYY-MM-DD' for today on this phone. */
 export const today = (d = new Date()) => d.toLocaleDateString('en-CA');
+export const signupsOpen = (now = today()) => now <= SIGNUPS_CLOSE;
 export const isUnboxed = (unboxing: string | null, now = today()) => !!unboxing && now >= unboxing;
 
 /** Wins from games tagged with the league, for everyone in the exchange (zeros included). */

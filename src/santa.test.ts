@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEAGUE, isUnboxed, santaSeason, standings } from './santa';
+import { LEAGUE, isUnboxed, santaSeason, signupsOpen, standings } from './santa';
 import type { GameRecord } from './types';
 
 const game = (winnerName: string | null, league?: string) => ({ winnerName, config: { league } }) as unknown as GameRecord;
@@ -26,4 +26,9 @@ describe('dates', () => {
     expect(santaSeason(new Date(2027, 1, 28))).toBe(true);
     expect(santaSeason(new Date(2027, 2, 1))).toBe(false);
   });
+});
+
+it('sign-ups stay open through Nov 19', () => {
+  expect(signupsOpen('2026-11-19')).toBe(true);
+  expect(signupsOpen('2026-11-20')).toBe(false);
 });

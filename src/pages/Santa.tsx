@@ -14,6 +14,7 @@ import {
   MIN_DRAW,
   SANTA_PLAYERS,
   drawNames,
+  signupsOpen,
   isUnboxed,
   loadExchange,
   myMatch,
@@ -99,6 +100,7 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
         <h3 className="font-cond text-lg font-bold text-brass">
           {x.drawn ? 'Names are drawn' : `${n} signed up. ${HOST} draws names when everyone’s in`}
         </h3>
+        {!x.drawn && <p className="text-sm text-dim">{signupsOpen() ? 'Sign-ups close Thursday, November 19' : 'Sign-ups are closed'}</p>}
         <div className="mt-2 flex flex-wrap gap-1.5">
           {x.signups.map((s) => (
             <span key={s.name} className="rounded-full bg-felt px-2.5 py-1 text-sm">
@@ -125,11 +127,11 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
           <p className="py-2 text-center text-dim">You’re in, {mine}. {HOST} draws names when everyone’s signed up</p>
           <NotifyNudge name={mine} />
         </>
-      ) : (
+      ) : signupsOpen() ? (
         <Btn variant="primary" className="w-full py-4 font-cond text-xl" onClick={() => go('signup')}>
           Sign up
         </Btn>
-      )}
+      ) : null}
 
       <a href={PDH_HOME} target="_blank" rel="noopener" className="block">
         <Card>

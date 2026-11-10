@@ -34,13 +34,16 @@ create table if not exists santa_pairs (
   primary key (exchange, giver)
 );
 
--- one sign-up at a time, and none once names are drawn
+-- one sign-up at a time, none after Thu Nov 19 (Philly time), and none once names are drawn
 create or replace function santa_before_signup() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   perform pg_advisory_xact_lock(hashtext('santa:' || new.exchange));
   if exists (select 1 from santa_pairs where exchange = new.exchange) then
     raise exception 'Names are already drawn';
+  end if;
+  if (now() at time zone 'America/New_York')::date > date '2026-11-19' then
+    raise exception 'Sign-ups closed on November 19';
   end if;
   return new;
 end $$;
