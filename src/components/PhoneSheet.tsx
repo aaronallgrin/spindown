@@ -11,6 +11,8 @@ export default function PhoneSheet() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const { names } = usePlayerMemory();
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
 
   useEffect(() => {
     pushState().then(setState, () => setState('unsupported'));
@@ -59,7 +61,41 @@ export default function PhoneSheet() {
                 {n}
               </button>
             ))}
+            {!adding && (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="rounded-full px-3.5 py-1.5 text-[15px] text-brass ring-1 ring-brass/50 ring-inset"
+              >
+                + New name
+              </button>
+            )}
           </div>
+          {adding && (
+            <form
+              className="mt-2 flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!draft.trim()) return;
+                pick(draft.trim());
+                setDraft('');
+                setAdding(false);
+              }}
+            >
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                maxLength={24}
+                placeholder="Your name"
+                aria-label="Your name"
+                className="min-w-0 flex-1 rounded-xl bg-white/[.06] px-3 py-2.5 text-bone placeholder:text-dim"
+              />
+              <button type="submit" disabled={!draft.trim()} className="rounded-xl bg-brass px-4 font-semibold text-felt disabled:opacity-40">
+                Save
+              </button>
+            </form>
+          )}
 
           <p className="mt-6 mb-2 text-xs font-semibold tracking-wider text-dim uppercase">Notifications</p>
           {state === 'install-first' && (
