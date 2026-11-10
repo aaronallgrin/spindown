@@ -64,6 +64,7 @@ export async function signUp(s: Signup) {
   } catch {
     /* private mode */
   }
+  notify('santa-signup'); // tells the host who joined
 }
 
 /** Host only (the app hides the button from everyone else). */

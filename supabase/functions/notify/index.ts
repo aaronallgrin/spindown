@@ -33,6 +33,7 @@ async function plan(kind: string, key: string, ex: string): Promise<{ to: Sub[];
 // Each message goes out once: the flags in santa_settings remember what was sent.
 
 const SANTA = { title: 'Pauper Secret Santa' };
+const HOST = 'Aaron'; // matches HOST in src/santa.ts
 const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
 
 async function santa(kind: string, ex: string): Promise<{ to: Sub[]; msg: (s: Sub) => Msg } | null> {
@@ -42,6 +43,16 @@ async function santa(kind: string, ex: string): Promise<{ to: Sub[]; msg: (s: Su
     db(`santa_settings?exchange=eq.${encodeURIComponent(ex)}`, { method: 'PATCH', body: JSON.stringify(patch) });
   const none = { to: [], msg: () => ({ title: '', body: '' }) };
 
+  if (kind === 'santa-signup') {
+    // tell the host who just joined; only for a sign-up from the last 2 minutes, so it can't be replayed
+    const rows: { name: string; created_at: string }[] = await (
+      await db(`santa_signups?exchange=eq.${encodeURIComponent(ex)}&select=name,created_at&order=created_at.desc`)
+    ).json();
+    const last = rows[0];
+    if (!last || Date.now() - Date.parse(last.created_at) > 120_000) return none;
+    const to: Sub[] = await (await db(`push_subs?name=ilike.${encodeURIComponent(HOST)}`)).json();
+    return { to, msg: () => ({ ...SANTA, body: `${last.name} signed up. ${rows.length} in so far.`, url: './#/santa' }) };
+  }
   if (kind === 'santa-drawn') {
     const drawn = await (await db('rpc/santa_drawn', { method: 'POST', body: JSON.stringify({ p_exchange: ex }) })).json();
     if (!drawn || st.drawn_notified) return none;
