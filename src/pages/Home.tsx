@@ -11,6 +11,7 @@ import PhoneSheet from '../components/PhoneSheet';
 import { needsNames } from '../game';
 import { THEMES, themesOn, type Look } from '../season';
 import { santaSeason } from '../santa';
+import { ElfPeek } from '../components/Elf';
 
 const santaSeen = () => {
   try {
@@ -75,9 +76,12 @@ export default function Home() {
             New game
           </BigLink>
           {santaSeason() && (
-            <BigLink to="/santa" tag={santaSeen() ? undefined : 'NEW'} sub={santaSeen() ? 'Gift exchange' : undefined}>
-              Pauper Secret Santa
-            </BigLink>
+            <div className="relative mt-10">
+              <ElfPeek />
+              <BigLink to="/santa" tag={santaSeen() ? undefined : 'NEW'} sub={santaSeen() ? 'Gift exchange' : undefined}>
+                Pauper Secret Santa
+              </BigLink>
+            </div>
           )}
           <BigLink to="/find">
             Plan game night
