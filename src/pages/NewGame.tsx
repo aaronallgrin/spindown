@@ -31,6 +31,8 @@ const loadPrefs = (): Prefs => {
   try {
     const p = JSON.parse(localStorage.getItem(PREFS) || 'null');
     if (p && layoutsFor(p.players, 'portrait').some((l) => l.id === p.layoutId)) return { ...DEFAULTS, ...p };
+    // no full setup saved yet, but keep a league/Pauper pre-set (Secret Santa's "Start a league game")
+    if (p) return { ...DEFAULTS, pauper: p.pauper, league: p.league };
   } catch {
     /* ignore */
   }

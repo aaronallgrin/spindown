@@ -388,3 +388,25 @@ html.table-lock body {
 @media (prefers-reduced-motion: reduce) {
   .season-fx { display: none; }
 }
+
+/* Secret Santa reveal elf */
+.santa-elf {
+  position: absolute;
+  right: -6px;
+  bottom: 100%;
+  width: 92px;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: elfPop 2.8s cubic-bezier(.3, 1.5, .5, 1) forwards;
+}
+@keyframes elfPop {
+  0% { transform: translateY(40px) scale(.2); opacity: 0; }
+  14% { transform: translateY(0) scale(1.08) rotate(-6deg); opacity: 1; }
+  22% { transform: scale(1) rotate(4deg); }
+  30% { transform: rotate(-3deg); }
+  38%, 80% { transform: rotate(0); opacity: 1; }
+  100% { transform: translateY(30px) scale(.4); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .santa-elf { display: none; }
+}

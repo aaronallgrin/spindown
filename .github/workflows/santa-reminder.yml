@@ -1,0 +1,20 @@
+# Once a day, ask the notify function whether Unboxing Day is close enough for a reminder.
+# The function decides; it sends at most one reminder per date. The key here is the app's
+# public (publishable) key, the same one every page load already carries.
+name: Secret Santa reminder
+
+on:
+  schedule:
+    - cron: '17 14 * * *' # about 9am Philadelphia time
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sS -X POST 'https://zjcbaqrmwygqxzazuifc.supabase.co/functions/v1/notify' \
+            -H 'apikey: sb_publishable_kzibfwZy2gOkU1jVmm4MxQ_S6i-9Y9q' \
+            -H 'Authorization: Bearer sb_publishable_kzibfwZy2gOkU1jVmm4MxQ_S6i-9Y9q' \
+            -H 'Content-Type: application/json' \
+            --data '{"kind":"santa-reminder","exchange":"2026"}'

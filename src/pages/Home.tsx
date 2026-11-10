@@ -10,6 +10,15 @@ import AppQr from '../components/AppQr';
 import PhoneSheet from '../components/PhoneSheet';
 import { needsNames } from '../game';
 import { THEMES, themesOn, type Look } from '../season';
+import { santaSeason } from '../santa';
+
+const santaSeen = () => {
+  try {
+    return localStorage.getItem('spindown.santaSeen') === '1';
+  } catch {
+    return false;
+  }
+};
 
 export default function Home() {
   const { game, lastConfig, start } = useStore();
@@ -65,6 +74,11 @@ export default function Home() {
           <BigLink to="/new" primary sub="Life counter">
             New game
           </BigLink>
+          {santaSeason() && (
+            <BigLink to="/santa" tag={santaSeen() ? undefined : 'NEW'} sub={santaSeen() ? 'Gift exchange' : undefined}>
+              Pauper Secret Santa
+            </BigLink>
+          )}
           <BigLink to="/find" tag="NEW">
             Plan game night
           </BigLink>
