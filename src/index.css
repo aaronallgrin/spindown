@@ -407,6 +407,26 @@ html.table-lock body {
   38%, 80% { transform: rotate(0); opacity: 1; }
   100% { transform: translateY(30px) scale(.4); opacity: 0; }
 }
+/* Home: the elf's head peeking over the top edge of the Secret Santa button */
+.elf-peek {
+  position: absolute;
+  right: 16px;
+  bottom: 100%;
+  width: 62px;
+  height: 54px; /* hat down to the eyes; the rest is "behind" the button */
+  overflow: hidden;
+  pointer-events: none;
+}
+.elf-peek svg {
+  display: block;
+  width: 62px;
+  animation: elfBob 3.2s ease-in-out infinite;
+}
+@keyframes elfBob {
+  0%, 100% { transform: translateY(3px); }
+  50% { transform: translateY(0); }
+}
 @media (prefers-reduced-motion: reduce) {
   .santa-elf { display: none; }
+  .elf-peek svg { animation: none; }
 }
