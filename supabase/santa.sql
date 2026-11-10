@@ -7,12 +7,13 @@
 
 create table if not exists santa_settings (
   exchange         text primary key,          -- '2026'
-  size             int  not null default 8,   -- names are drawn when this many sign up
+  size             int,                       -- unused: the host draws names from the app
   unboxing         date,                      -- Unboxing Day, null = TBD
   drawn_notified   boolean not null default false,
   date_notified    date,                      -- the date we last told everyone about
   reminder_notified boolean not null default false
 );
+alter table santa_settings alter column size drop not null, alter column size drop default;
 insert into santa_settings (exchange) values ('2026') on conflict do nothing;
 
 create table if not exists santa_signups (
@@ -33,39 +34,42 @@ create table if not exists santa_pairs (
   primary key (exchange, giver)
 );
 
--- one sign-up at a time, no more than `size`, and draw the moment the last one lands
+-- one sign-up at a time, none after Thu Nov 19 (Philly time), and none once names are drawn
 create or replace function santa_before_signup() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   perform pg_advisory_xact_lock(hashtext('santa:' || new.exchange));
-  if (select count(*) from santa_signups where exchange = new.exchange)
-     >= (select size from santa_settings where exchange = new.exchange) then
-    raise exception 'Everyone''s already signed up';
+  if exists (select 1 from santa_pairs where exchange = new.exchange) then
+    raise exception 'Names are already drawn';
+  end if;
+  if (now() at time zone 'America/New_York')::date > date '2026-11-19' then
+    raise exception 'Sign-ups closed on November 19';
   end if;
   return new;
 end $$;
 
--- one shuffled loop: nobody gets themselves, and no two people just swap
-create or replace function santa_after_signup() returns trigger
+-- the host taps Draw names: one shuffled loop, nobody gets themselves, and no two people just swap
+create or replace function santa_draw(p_exchange text) returns boolean
 language plpgsql security definer set search_path = public as $$
 begin
-  if (select count(*) from santa_signups where exchange = new.exchange)
-     = (select size from santa_settings where exchange = new.exchange)
-     and not exists (select 1 from santa_pairs where exchange = new.exchange) then
-    with s as (
-      select name, row_number() over (order by random()) as i, count(*) over () as n
-      from santa_signups where exchange = new.exchange
-    )
-    insert into santa_pairs (exchange, giver, receiver)
-    select new.exchange, a.name, b.name from s a join s b on b.i = a.i % a.n + 1;
+  perform pg_advisory_xact_lock(hashtext('santa:' || p_exchange));
+  if exists (select 1 from santa_pairs where exchange = p_exchange) then return true; end if;
+  if (select count(*) from santa_signups where exchange = p_exchange) < 3 then
+    raise exception 'Need at least 3 people to draw';
   end if;
-  return new;
+  with s as (
+    select name, row_number() over (order by random()) as i, count(*) over () as n
+    from santa_signups where exchange = p_exchange
+  )
+  insert into santa_pairs (exchange, giver, receiver)
+  select p_exchange, a.name, b.name from s a join s b on b.i = a.i % a.n + 1;
+  return true;
 end $$;
 
 drop trigger if exists santa_before on santa_signups;
 drop trigger if exists santa_after on santa_signups;
+drop function if exists santa_after_signup();
 create trigger santa_before before insert on santa_signups for each row execute function santa_before_signup();
-create trigger santa_after after insert on santa_signups for each row execute function santa_after_signup();
 
 -- "who did I draw?" for the phone holding p_key, and nobody else
 create or replace function santa_my_match(p_exchange text, p_key text)
@@ -108,5 +112,5 @@ create policy "read signups" on santa_signups for select to anon using (true);
 create policy "sign up" on santa_signups for insert to anon with check (true);
 
 -- pairs: no access at all; only the two functions above look inside
-revoke execute on function santa_my_match(text, text), santa_drawn(text) from public;
-grant execute on function santa_my_match(text, text), santa_drawn(text) to anon;
+revoke execute on function santa_my_match(text, text), santa_drawn(text), santa_draw(text) from public;
+grant execute on function santa_my_match(text, text), santa_drawn(text), santa_draw(text) to anon;

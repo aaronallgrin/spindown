@@ -11,8 +11,10 @@ import {
   HOST,
   LEAGUE,
   PDH_HOME,
+  MIN_DRAW,
   SANTA_PLAYERS,
-  SIZE,
+  drawNames,
+  signupsOpen,
   isUnboxed,
   loadExchange,
   myMatch,
@@ -73,6 +75,21 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
   const n = x.signups.length;
   const mine = mySignup();
   const unboxed = isUnboxed(x.unboxing);
+  const isHost = (mine ?? playerName()) === HOST;
+  const [drawing, setDrawing] = useState(false);
+  const [drawErr, setDrawErr] = useState('');
+  const draw = async () => {
+    if (!confirm(`Draw names for these ${n}? Nobody else can sign up after this.`)) return;
+    setDrawing(true);
+    setDrawErr('');
+    try {
+      await drawNames();
+      reload();
+    } catch (e) {
+      setDrawErr(e instanceof Error ? e.message : 'The draw didn’t go through.');
+    }
+    setDrawing(false);
+  };
   const league = x.drawn && <League names={x.signups.map((s) => s.name)} startGame={() => startLeagueGame(nav)} />;
 
   return (
@@ -81,18 +98,24 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
 
       <Card>
         <h3 className="font-cond text-lg font-bold text-brass">
-          {x.drawn ? 'Names are drawn' : n === SIZE - 1 ? 'One more and we draw' : `${n} of ${SIZE} in. Waiting on ${SIZE - n}`}
+          {x.drawn ? 'Names are drawn' : `${n} signed up. ${HOST} draws names when everyone’s in`}
         </h3>
-        <div className="my-2 h-2 overflow-hidden rounded bg-felt">
-          <div className="h-full bg-brass transition-all" style={{ width: `${(n / SIZE) * 100}%` }} />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
+        {!x.drawn && <p className="text-sm text-dim">{signupsOpen() ? 'Sign-ups close Thursday, November 19' : 'Sign-ups are closed'}</p>}
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {x.signups.map((s) => (
             <span key={s.name} className="rounded-full bg-felt px-2.5 py-1 text-sm">
               {s.name}
             </span>
           ))}
         </div>
+        {isHost && !x.drawn && (
+          <>
+            <Btn variant="primary" className="mt-3 w-full" disabled={drawing || n < MIN_DRAW} onClick={draw}>
+              {drawing ? 'Drawing…' : n < MIN_DRAW ? `Draw names (need ${MIN_DRAW})` : 'Draw names'}
+            </Btn>
+            {drawErr && <p className="mt-1 text-sm text-blood">{drawErr}</p>}
+          </>
+        )}
       </Card>
 
       {x.drawn ? (
@@ -101,14 +124,14 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
         </Btn>
       ) : mine ? (
         <>
-          <p className="py-2 text-center text-dim">You’re in, {mine}. We draw when everyone’s signed up</p>
+          <p className="py-2 text-center text-dim">You’re in, {mine}. {HOST} draws names when everyone’s signed up</p>
           <NotifyNudge name={mine} />
         </>
-      ) : (
+      ) : signupsOpen() ? (
         <Btn variant="primary" className="w-full py-4 font-cond text-xl" onClick={() => go('signup')}>
           Sign up
         </Btn>
-      )}
+      ) : null}
 
       <a href={PDH_HOME} target="_blank" rel="noopener" className="block">
         <Card>
@@ -273,7 +296,8 @@ export function SantaSignUp() {
   }, []);
   const open = SANTA_PLAYERS.filter((n) => !taken?.includes(n));
   const [name, setName] = useState('');
-  const picked = name || (taken && open.includes(playerName()) ? playerName() : '');
+  const [other, setOther] = useState('');
+  const picked = other.trim() || name || (taken && open.includes(playerName()) ? playerName() : '');
   const [theme, setTheme] = useState('');
   const [avoid, setAvoid] = useState('');
   const [err, setErr] = useState('');
@@ -282,7 +306,8 @@ export function SantaSignUp() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const name = picked;
-    if (!name) return setErr('Tap your name first.');
+    if (!name) return setErr('Tap or type your name first.');
+    if (taken?.some((t) => t.toLowerCase() === name.toLowerCase())) return setErr(`${name}'s already in.`);
     if (!theme.trim()) return setErr('Give your Santa something to work with.');
     setBusy(true);
     setErr('');
@@ -307,13 +332,24 @@ export function SantaSignUp() {
               key={n}
               type="button"
               aria-pressed={n === picked}
-              onClick={() => setName(n)}
+              onClick={() => {
+                setName(n);
+                setOther('');
+              }}
               className={`rounded-full px-4 py-2 font-cond text-lg transition ${n === picked ? 'bg-brass font-bold text-felt' : 'bg-felt-2 text-bone ring-1 ring-white/10'}`}
             >
               {n}
             </button>
           ))}
         </div>
+        <input
+          value={other}
+          onChange={(e) => setOther(e.target.value)}
+          maxLength={40}
+          placeholder="Not listed? Type your name"
+          aria-label="Your name"
+          className="mt-3 w-full rounded-xl bg-white/[.06] p-3 text-bone placeholder:text-dim"
+        />
         <label className="mt-5 mb-1.5 block text-sm text-dim" htmlFor="theme">
           Theme, vibe, colors, mechanics you want
         </label>
