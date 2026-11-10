@@ -38,7 +38,7 @@ export async function cloud(path: string, init: RequestInit & { prefer?: string 
   if (r.status === 404) throw new Error('Notifications aren’t set up in Supabase yet (push.sql and the notify function).');
   if (!r.ok) {
     const body = await r.text();
-    // database errors we raise on purpose ("Everyone's already signed up") read fine as they are
+    // database errors we raise on purpose ("Names are already drawn") read fine as they are
     let msg = '';
     try {
       msg = JSON.parse(body).message ?? '';

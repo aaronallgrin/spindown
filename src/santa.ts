@@ -1,15 +1,16 @@
 /**
  * Pauper Secret Santa. Sign-ups and the Unboxing Day date live in Supabase
- * (supabase/santa.sql). The draw happens inside the database when the last person
- * signs up, and a phone can only ever ask who *it* drew.
+ * (supabase/santa.sql). The host taps Draw names once everyone's in; the draw happens
+ * inside the database, and a phone can only ever ask who *it* drew.
  */
 import { playerKey } from './polls';
 import { cloud } from './push';
 import type { GameRecord } from './types';
 
 export const EXCHANGE = '2026';
-export const SIZE = 8;
-export const SANTA_PLAYERS = ['Aaron', 'Andrew', 'Chris', 'Cody', 'Colin', 'Josh', 'Marion', 'Tim'];
+export const MIN_DRAW = 3; // fewer than this and the loop is pointless
+export const SANTA_PLAYERS = // quick picks on sign-up; anyone else types their name
+  ['Aaron', 'Andrew', 'Chris', 'Cody', 'Colin', 'Josh', 'Marion', 'Tim'];
 export const LEAGUE = 'Pauper Secret Santa League';
 export const HOST = 'Aaron'; // the one who sets Unboxing Day
 export const PDH_HOME = 'https://www.pdhhomebase.com/';
@@ -56,7 +57,12 @@ export async function signUp(s: Signup) {
   } catch {
     /* private mode */
   }
-  notify('santa-drawn'); // only sends if this sign-up was the last one
+}
+
+/** Host only (the app hides the button from everyone else). */
+export async function drawNames() {
+  await cloud('rest/v1/rpc/santa_draw', { method: 'POST', body: JSON.stringify({ p_exchange: EXCHANGE }) });
+  notify('santa-drawn');
 }
 
 export async function myMatch(): Promise<Signup | null> {
