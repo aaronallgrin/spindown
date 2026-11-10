@@ -10,13 +10,12 @@ const VAPID_PUBLIC = 'BOXuKP5fqlDvrFlMsbuEvvso-SPbLC__qLZYcISs4_j6G_5aMYPUwovRNC
 
 export type PushState = 'unsupported' | 'install-first' | 'blocked' | 'off' | 'on';
 
-const iOS = /iP(hone|ad|od)/.test(navigator.userAgent);
-const standalone =
-  window.matchMedia?.('(display-mode: standalone)').matches ||
-  window.matchMedia?.('(display-mode: fullscreen)').matches ||
-  (navigator as { standalone?: boolean }).standalone === true;
-
 export async function pushState(): Promise<PushState> {
+  const iOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  const standalone =
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.matchMedia?.('(display-mode: fullscreen)').matches ||
+    (navigator as { standalone?: boolean }).standalone === true;
   if (!('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window))
     return iOS && !standalone ? 'install-first' : 'unsupported';
   if (Notification.permission === 'denied') return 'blocked';
@@ -24,7 +23,8 @@ export async function pushState(): Promise<PushState> {
   return sub && Notification.permission === 'granted' ? 'on' : 'off';
 }
 
-async function cloud(path: string, init: RequestInit & { prefer?: string } = {}) {
+/** Call the group's Supabase (tables, rpc, functions). Throws readable errors. */
+export async function cloud(path: string, init: RequestInit & { prefer?: string } = {}) {
   const c = pollsCfg();
   if (!c) throw new Error('This phone isn’t connected to the group yet.');
   const headers: Record<string, string> = { apikey: c.key, Authorization: `Bearer ${c.key}`, 'Content-Type': 'application/json' };
@@ -36,7 +36,17 @@ async function cloud(path: string, init: RequestInit & { prefer?: string } = {})
     throw new Error('Can’t reach the group. Check you’re online.');
   }
   if (r.status === 404) throw new Error('Notifications aren’t set up in Supabase yet (push.sql and the notify function).');
-  if (!r.ok) throw new Error(`Supabase answered ${r.status}: ${(await r.text()).slice(0, 140)}`);
+  if (!r.ok) {
+    const body = await r.text();
+    // database errors we raise on purpose ("Everyone's already signed up") read fine as they are
+    let msg = '';
+    try {
+      msg = JSON.parse(body).message ?? '';
+    } catch {
+      /* not json */
+    }
+    throw new Error(msg && !msg.includes('violates') ? msg : `Supabase answered ${r.status}: ${body.slice(0, 140)}`);
+  }
   return r;
 }
 
