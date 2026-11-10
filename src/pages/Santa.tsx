@@ -12,6 +12,8 @@ import {
   LEAGUE,
   PDH_HOME,
   MIN_DRAW,
+  amHost,
+  closesOn,
   SANTA_PLAYERS,
   drawNames,
   signupsOpen,
@@ -78,7 +80,7 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
   const n = x.signups.length;
   const mine = mySignup();
   const unboxed = isUnboxed(x.unboxing);
-  const isHost = (mine ?? playerName()) === HOST;
+  const isHost = amHost();
   const [drawing, setDrawing] = useState(false);
   const [drawErr, setDrawErr] = useState('');
   const draw = async () => {
@@ -101,9 +103,13 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
 
       <Card>
         <h3 className="font-cond text-lg font-bold text-brass">
-          {x.drawn ? 'Names are drawn' : `${n} signed up. ${HOST} draws names when everyone’s in`}
+          {x.drawn ? 'Names are drawn' : `${n} signed up`}
         </h3>
-        {!x.drawn && <p className="text-sm text-dim">{signupsOpen() ? 'Sign-ups close Thursday, November 19' : 'Sign-ups are closed'}</p>}
+        <p className="text-sm text-dim">
+          {x.drawn
+            ? `Drawn at random. Nobody can see who has who, not even ${HOST}`
+            : `${signupsOpen() ? `Sign-ups close ${closesOn()}` : 'Sign-ups are closed'}. Then ${HOST} draws names at random`}
+        </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {x.signups.map((s) => (
             <span key={s.name} className="rounded-full bg-felt px-2.5 py-1 text-sm">
@@ -127,7 +133,7 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
         </Btn>
       ) : mine ? (
         <>
-          <p className="py-2 text-center text-dim">You’re in, {mine}. {HOST} draws names when everyone’s signed up</p>
+          <p className="py-2 text-center text-dim">You’re in, {mine}</p>
           <NotifyNudge name={mine} />
         </>
       ) : signupsOpen() ? (
@@ -223,7 +229,7 @@ function UnboxingDate({ date, reload }: { date: string | null; reload: () => voi
   const [val, setVal] = useState(date ?? '');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
-  const host = playerName().toLowerCase() === HOST.toLowerCase();
+  const host = amHost();
   const pretty = date && new Date(`${date}T12:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
   const save = async () => {

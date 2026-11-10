@@ -3,7 +3,7 @@
  * (supabase/santa.sql). The host taps Draw names once everyone's in; the draw happens
  * inside the database, and a phone can only ever ask who *it* drew.
  */
-import { playerKey } from './polls';
+import { playerKey, playerName } from './polls';
 import { cloud } from './push';
 import type { GameRecord } from './types';
 
@@ -40,6 +40,12 @@ export const mySignup = () => {
     return null;
   }
 };
+
+/** This phone belongs to the host (by its sign-up, else the name it remembers). */
+export const amHost = () => (mySignup() ?? playerName()).trim().toLowerCase() === HOST.toLowerCase();
+
+/** 'Thursday, November 19' */
+export const closesOn = () => new Date(`${SIGNUPS_CLOSE}T12:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
 export async function signUp(s: Signup) {
   try {
