@@ -14,6 +14,8 @@ import NewGame from './pages/NewGame';
 import Play from './pages/Play';
 import { lazyRoute } from './lazyPage';
 import RouteError from './pages/RouteError';
+import InstallFirst from './pages/InstallFirst';
+import { mustInstall } from './install';
 
 // Home, New game and the table load with the app; everything else loads on first visit
 const def = (m: { default: ComponentType }) => m.default;
@@ -44,12 +46,16 @@ const router = createHashRouter([
   },
 ]);
 
-startAutoSync();
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <StoreProvider>
-      <RouterProvider router={router} />
-    </StoreProvider>
-  </StrictMode>,
-);
+const root = createRoot(document.getElementById('root')!);
+if (mustInstall()) {
+  root.render(<InstallFirst />);
+} else {
+  startAutoSync();
+  root.render(
+    <StrictMode>
+      <StoreProvider>
+        <RouterProvider router={router} />
+      </StoreProvider>
+    </StrictMode>,
+  );
+}

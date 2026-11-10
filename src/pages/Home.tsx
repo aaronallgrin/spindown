@@ -91,12 +91,6 @@ export default function Home() {
           </BigLink>
         </div>
 
-        {!installed && (
-          <p className="mt-3 rounded-2xl border border-brass/30 bg-brass/10 px-4 py-3 text-sm">
-            <span className="font-semibold text-brass">Keep Spindown one tap away.</span>{' '}
-            <span className="text-bone/80">iPhone: Share, then Add to Home Screen. Android: menu ⋮, then Install app.</span>
-          </p>
-        )}
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <button
             onClick={() => setSharing((v) => !v)}
@@ -132,10 +126,6 @@ export default function Home() {
     </div>
   );
 }
-
-// running from the home screen icon rather than a browser tab
-const installed =
-  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
 /** Snow, leaves, petals, fireflies, or the day's holiday. Decoration only. */
 function SeasonFx() {

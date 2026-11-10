@@ -3,6 +3,7 @@
  * next to this phone's name, and supabase/functions/notify sends them.
  * iPhone: only works in the installed app (Add to Home Screen), iOS 16.4+.
  */
+import { isInstalled } from './install';
 import { playerKey, pollsCfg } from './polls';
 
 // public half of the notification key; the private half is a Supabase secret
@@ -11,13 +12,8 @@ const VAPID_PUBLIC = 'BOXuKP5fqlDvrFlMsbuEvvso-SPbLC__qLZYcISs4_j6G_5aMYPUwovRNC
 export type PushState = 'unsupported' | 'install-first' | 'blocked' | 'off' | 'on';
 
 export async function pushState(): Promise<PushState> {
-  const iOS = /iP(hone|ad|od)/.test(navigator.userAgent);
-  const standalone =
-    window.matchMedia?.('(display-mode: standalone)').matches ||
-    window.matchMedia?.('(display-mode: fullscreen)').matches ||
-    (navigator as { standalone?: boolean }).standalone === true;
   if (!('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window))
-    return iOS && !standalone ? 'install-first' : 'unsupported';
+    return /iP(hone|ad|od)/.test(navigator.userAgent) && !isInstalled() ? 'install-first' : 'unsupported';
   if (Notification.permission === 'denied') return 'blocked';
   const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
   return sub && Notification.permission === 'granted' ? 'on' : 'off';
