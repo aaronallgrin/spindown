@@ -79,7 +79,7 @@ export default function Home() {
               Pauper Secret Santa
             </BigLink>
           )}
-          <BigLink to="/find" tag="NEW">
+          <BigLink to="/find">
             Plan game night
           </BigLink>
           <BigLink to="/history" sub={count ? `${count} games · stats` : 'Stats'}>
