@@ -61,12 +61,10 @@ export default function Santa() {
       </svg>
       <p className="text-dim">You build a Pauper Commander deck for one of us. Someone builds one for you. Nobody knows who.</p>
       <p className="mt-1 font-semibold text-bone">$20 cap, deck box included</p>
-      <p className="text-[11px] text-brass">
-        IP by Andrew Campos{' '}
-        <a href="https://www.instagram.com/andoo_c/" target="_blank" rel="noopener" className="underline">
-          @andoo_c
-        </a>
-      </p>
+      {/* whole line is the link, with padding, so it's an easy thumb target */}
+      <a href="https://www.instagram.com/andoo_c/" target="_blank" rel="noopener" className="-ml-2 inline-block px-2 py-2.5 text-xs text-brass">
+        IP by Andrew Campos <span className="underline">@andoo_c</span>
+      </a>
 
       {err && <p className="mt-4 rounded-xl bg-blood/20 px-4 py-3 text-sm">{err}</p>}
       {!x && !err && <p className="mt-6 text-dim">Loading…</p>}
