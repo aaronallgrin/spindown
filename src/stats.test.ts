@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeConfig, newGame, reduce, toRecord, type Action } from './game';
-import { grudges } from './stats';
+import { byPlayer, grudges } from './stats';
 
 const NAMES = ['Aaron', 'Tim', 'Chris', 'Cody'];
 function game(...as: Action[]) {
@@ -29,5 +29,15 @@ describe('grudges', () => {
     expect(dmg.get('Tim')?.has('Cody')).toBe(false);
     // the second game had no commander damage, so it doesn't count toward the average
     expect(aggressive[0]).toMatchObject({ name: 'Tim', games: 1, total: 11, avg: 11, fav: 'Aaron' });
+  });
+});
+
+describe('misplays', () => {
+  it('counts the * rate only over games that tracked it', () => {
+    const tracked = game({ t: 'extra', seat: 0, d: 1 }, { t: 'extra', seat: 0, d: 1 });
+    const untracked = { ...game(), players: game().players.map((p) => ({ ...p, finalExtra: undefined })) };
+    const aaron = byPlayer([tracked, untracked, untracked]).find((r) => r.label === 'Aaron')!;
+    expect(aaron.games).toBe(3);
+    expect(aaron.extra).toMatchObject({ misplays: 2, misplayGames: 1 });
   });
 });

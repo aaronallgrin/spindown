@@ -92,14 +92,22 @@ export function byPlayer(games: GameRecord[]): Row[] {
     const pl = places(g);
     for (const p of g.players) {
       const r = m.get(p.name)!;
-      const e = (r.extra ??= { placeSum: 0, misplays: 0 });
+      const e = (r.extra ??= { placeSum: 0, misplays: 0, misplayGames: 0 });
       e.placeSum = (e.placeSum as number) + (pl.get(p.seat) ?? g.playerCount);
-      e.misplays = (e.misplays as number) + (p.finalExtra ?? 0);
+      // only games that tracked the * counter count toward the misplay rate
+      if (p.finalExtra != null) {
+        e.misplays = (e.misplays as number) + p.finalExtra;
+        e.misplayGames = (e.misplayGames as number) + 1;
+      }
     }
   }
   return finish(m).map((r) => ({
     ...r,
-    extra: { avgPlace: (r.extra!.placeSum as number) / r.games, misplays: r.extra!.misplays as number },
+    extra: {
+      avgPlace: (r.extra!.placeSum as number) / r.games,
+      misplays: r.extra!.misplays as number,
+      misplayGames: r.extra!.misplayGames as number,
+    },
   }));
 }
 

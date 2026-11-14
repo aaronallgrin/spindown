@@ -189,8 +189,14 @@ export default function Stats() {
 
           <CountSection
             title="Misplays *"
+            note="Per game counts only games that tracked the * counter."
             rows={byPlayer(games)
-              .map((r) => ({ key: r.key, label: r.label, n: r.extra!.misplays as number, per: (r.extra!.misplays as number) / r.games }))
+              .map((r) => ({
+                key: r.key,
+                label: r.label,
+                n: r.extra!.misplays as number,
+                per: (r.extra!.misplays as number) / Math.max(1, r.extra!.misplayGames as number),
+              }))
               .filter((r) => r.n > 0)
               .sort((a, b) => b.n - a.n)}
             empty="Nobody has a * yet."
@@ -329,16 +335,18 @@ function RateRow({
 
 function CountSection({
   title,
+  note,
   rows,
   empty,
 }: {
   title: string;
+  note?: string;
   rows: { key: string; label: string; n: number; per?: number }[];
   empty?: string;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.n));
   return (
-    <Section title={title}>
+    <Section title={title} note={note}>
       {rows.length === 0 && <p className="px-2 py-2 text-sm text-dim">{empty ?? 'Nothing yet.'}</p>}
       {rows.map((r) => (
         <div key={r.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-2 py-2">
