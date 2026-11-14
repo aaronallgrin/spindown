@@ -169,6 +169,11 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
               )}
               </button>
             </div>
+            {game.monarchSeat === seat && !p.out && (
+              <span className="crown-in shrink-0 text-brass" title="Monarch" aria-label="Monarch" style={{ marginTop: '0.4cqh' }}>
+                <Crown size="11cqh" />
+              </span>
+            )}
           </div>
 
           {/* life with tap halves */}
