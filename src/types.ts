@@ -143,6 +143,8 @@ export interface LiveGame {
   round: number;
   /** total turns taken, 1-based */
   turn: number;
+  /** who holds the monarch's crown; missing on games started before it came back */
+  monarchSeat?: number | null;
   players: LivePlayer[];
   events: GameEvent[];
   winnerSeat: number | null;
@@ -167,7 +169,6 @@ export interface PlayerResult {
   finalPoison: number;
   cmdrDamageTaken: number;
   finalExtra?: number;
-  /** only on games from before monarch tracking was removed */
   wasMonarchAtEnd?: boolean;
 }
 

@@ -80,6 +80,7 @@ export type Action =
   | { t: 'egg'; seat: number; egg: string }
   | { t: 'poison'; seat: number; d: number }
   | { t: 'cmdr'; seat: number; from: number; partner: 0 | 1; d: number }
+  | { t: 'monarch'; seat: number }
   | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
@@ -206,6 +207,11 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         events: log(g, { kind: 'cmdr', seat: a.seat, from: a.from, partner: a.partner, delta: real }),
       };
     }
+    case 'monarch': {
+      // one crown at the table: tapping it moves it to you, tapping it again takes it off
+      const seat = g.monarchSeat === a.seat ? null : a.seat;
+      return { ...g, monarchSeat: seat, events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: seat ?? -1, kind: 'monarch' }] };
+    }
     case 'seatInfo': {
       // 'over' too: a quick-start game gets its names and decks after the last hit.
       // Mid-game only the deck can change (a forgotten commander), never the name.
@@ -263,6 +269,7 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       }));
       const withLog = {
         ...n,
+        monarchSeat: g.monarchSeat === a.seat ? null : g.monarchSeat,
         events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'out' as const, cause: a.cause }],
       };
       return finishIfOver(withLog);
@@ -340,6 +347,7 @@ export function toRecord(g: LiveGame): GameRecord {
       finalPoison: p.poison,
       cmdrDamageTaken: Object.values(p.cmdr).reduce((a, b) => a + b, 0),
       finalExtra: g.config.extraCounter ? (p.extra ?? 0) : undefined,
+      wasMonarchAtEnd: g.monarchSeat === p.seat,
     };
   });
   const winner = players.find((p) => p.result === 'win');

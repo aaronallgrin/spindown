@@ -199,4 +199,11 @@ describe('Pauper Commander', () => {
     expect(c.startingLife).toBe(40);
     expect(lethalCause(g, { ...g.players[0], cmdr: { '1:0': 16 } })).toBe(null);
   });
+
+  it('moves the one monarch crown around and drops it when its holder is out', () => {
+    const g = run(started(), { t: 'monarch', seat: 0 }, { t: 'monarch', seat: 2 });
+    expect(g.monarchSeat).toBe(2);
+    expect(run(g, { t: 'monarch', seat: 2 }).monarchSeat).toBeNull();
+    expect(run(g, { t: 'out', seat: 2, cause: 'lose' }).monarchSeat).toBeNull();
+  });
 });
