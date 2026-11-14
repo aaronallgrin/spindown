@@ -43,3 +43,14 @@ export const defaultLayout = (players: number, orientation: Orientation) =>
   layoutsFor(players, orientation)[0];
 
 export const seatLetter = (seat: number) => String.fromCharCode(97 + seat);
+
+/** The seat grid as the player facing `rot` sees it: their own edge at the bottom, the table in the same places. */
+export function turnAreas(areas: string[], rot: Rot): string[][] {
+  const m = areas.map((r) => r.split(' '));
+  const rows = m.length, cols = m[0].length;
+  if (rot === 0) return m;
+  if (rot === 180) return m.map((r) => [...r].reverse()).reverse();
+  return Array.from({ length: cols }, (_, i) =>
+    Array.from({ length: rows }, (_, j) => (rot === 90 ? m[j][cols - 1 - i] : m[rows - 1 - j][i])),
+  );
+}

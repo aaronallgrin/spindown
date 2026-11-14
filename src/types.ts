@@ -26,8 +26,8 @@ export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
     { name: 'Oathbreaker', life: 20 },
     // always one shared blue deck, 20 life each
     { name: 'Dandân', life: 20, shared: { deckName: 'Shared Dandân deck', colors: ['U'] } },
-    // a deck is one opened pack: just its set
-    { name: 'Pai Gow', life: 20, fields: { deck: 'Set of your pack, like Bloomburrow', theme: null } },
+    // a deck is one opened pack: just its set, 5 life each
+    { name: 'Pai Gow', life: 5, fields: { deck: 'Set of your pack, like Bloomburrow', theme: null } },
     { name: 'Casual', life: 20 },
   ],
 };
@@ -124,8 +124,6 @@ export interface GameEvent {
   from?: number;
   partner?: 0 | 1;
   cause?: OutCause;
-  /** why a * was given (misplay, slow…), for kind 'extra' */
-  note?: string;
   /** easter egg id, for kind 'egg' */
   egg?: string;
 }
@@ -145,6 +143,8 @@ export interface LiveGame {
   round: number;
   /** total turns taken, 1-based */
   turn: number;
+  /** who holds the monarch's crown; missing on games started before it came back */
+  monarchSeat?: number | null;
   players: LivePlayer[];
   events: GameEvent[];
   winnerSeat: number | null;
@@ -169,7 +169,6 @@ export interface PlayerResult {
   finalPoison: number;
   cmdrDamageTaken: number;
   finalExtra?: number;
-  /** only on games from before monarch tracking was removed */
   wasMonarchAtEnd?: boolean;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cmdrLethal, POISON_LETHAL, lethalCause, type Action } from '../game';
-import type { Rot } from '../layouts';
+import { getLayout, seatLetter, turnAreas, type Rot } from '../layouts';
 import { DANDAN_MARKS, isDandan, type LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
 import { Crown, Poison, Skull, Sword } from './icons';
@@ -9,7 +9,7 @@ import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
 import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
 
-export type SheetKind = 'panel' | 'keypad' | 'events' | 'star' | 'cmdr';
+export type SheetKind = 'panel' | 'events';
 
 interface Props {
   game: LiveGame;
@@ -96,7 +96,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
     }
   });
   const star = usePress(
-    () => setSheet('star'),
+    () => (buzz(), dispatch({ t: 'extra', seat, d: 1 })),
     () => dispatch({ t: 'extra', seat, d: -1 }),
     500,
     1e9,
@@ -246,7 +246,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
             {extraName && (
               <button
                 {...star}
-                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to pick a reason, hold to take one back`}
+                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to add one, hold to take one back`}
                 className={`flex h-[2.6em] min-w-[2.6em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
                   (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/60 text-bone/80'
                 }`}
@@ -413,7 +413,7 @@ export function SeatSheet({
         <div className="face-inner flex flex-col bg-felt">
           <div className="flex items-center gap-3 px-[2.5cqh] pt-[2cqh]" style={{ fontSize: 'clamp(13px, 3.2cqh, 20px)' }}>
             <button
-              onClick={() => (kind === 'keypad' || kind === 'cmdr' ? setSheet('panel') : close())}
+              onClick={close}
               className="flex min-h-[2.6em] items-center rounded-full bg-felt-3 px-[1.1em] font-semibold text-bone/90 active:bg-line"
             >
               ‹ Back
@@ -421,63 +421,13 @@ export function SeatSheet({
             <span className="min-w-0 truncate font-cond text-[1.3em] font-bold">{game.config.players[seat].name}</span>
           </div>
           <div className="relative min-h-0 flex-1">
-            {kind === 'keypad' ? (
-              <Keypad
-                life={game.players[seat].life}
-                onClose={() => setSheet('panel')}
-                onApply={(value) => {
-                  dispatch({ t: 'setLife', seat, value });
-                  close();
-                }}
-              />
-            ) : kind === 'cmdr' ? (
-              <CmdrPanel game={game} seat={seat} dispatch={dispatch} done={() => setSheet('panel')} />
-            ) : kind === 'star' ? (
-              <StarPanel game={game} seat={seat} dispatch={dispatch} close={close} />
-            ) : kind === 'events' ? (
+            {kind === 'events' ? (
               <EventsPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : (
-              <CounterPanel game={game} seat={seat} dispatch={dispatch} close={close} open={setSheet} />
+              <CounterPanel game={game} seat={seat} rot={rot} dispatch={dispatch} close={close} />
             )}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-const STAR_REASONS = ['Misplay', 'Take-back', 'Slow play', 'Missed trigger', 'Forgot something', 'Other'];
-
-/** Tapping the * opens this: what the * means, and why this one was earned. */
-function StarPanel({ game, seat, dispatch, close }: { game: LiveGame; seat: number; dispatch: (a: Action) => void; close: () => void }) {
-  const name = game.config.extraCounter?.trim() ?? '*';
-  const count = game.players[seat].extra ?? 0;
-  const tally = new Map<string, number>();
-  for (const e of game.events)
-    if (e.kind === 'extra' && e.seat === seat && e.note) tally.set(e.note, (tally.get(e.note) ?? 0) + (e.delta ?? 0));
-  const so = [...tally].filter(([, n]) => n > 0).map(([r, n]) => (n > 1 ? `${r} ×${n}` : r));
-  return (
-    <div className="absolute inset-0 flex flex-col p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.2cqh, 20px)' }}>
-      <p className="mb-[1.5cqh] text-bone/80">
-        A <span className="font-cond font-bold text-brass">{name}</span> marks a mistake. What happened?
-        {so.length > 0 && <span className="block text-[0.85em] text-dim">This game: {so.join(', ')}</span>}
-      </p>
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.5cqh]">
-        {STAR_REASONS.map((r) => (
-          <button key={r} onClick={() => (buzz(), dispatch({ t: 'extra', seat, d: 1, note: r }), close())} className="rounded-lg bg-felt-3 px-2 font-semibold active:bg-line">
-            {r}
-          </button>
-        ))}
-      </div>
-      <div className="mt-[2cqh] flex gap-2 [&>*]:flex-1">
-        {count > 0 && (
-          <button className="rounded-lg bg-felt-3 px-3 py-[1.6cqh] text-bone/80" onClick={() => (dispatch({ t: 'extra', seat, d: -1 }), close())}>
-            Take one back
-          </button>
-        )}
-        <button className="rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
-          Cancel
-        </button>
       </div>
     </div>
   );
@@ -609,58 +559,6 @@ function useSettled<T>(value: T, cb: (before: T, after: T) => void, ms = 1200) {
   }, [value, ms]);
 }
 
-/** Type a new life total, or an amount gained or lost, instead of tapping. */
-function Keypad({ life, onApply, onClose }: { life: number; onApply: (v: number) => void; onClose: () => void }) {
-  const [mode, setMode] = useState<'set' | 'gain' | 'lose'>('set');
-  const [digits, setDigits] = useState('');
-  const n = Number(digits || 0);
-  const result = mode === 'set' ? n : mode === 'gain' ? life + n : life - n;
-  const press = (k: string) => {
-    if (k === 'back') return setDigits((d) => d.slice(0, -1));
-    setDigits((d) => (d.length >= 7 ? d : (d + k).replace(/^0+(?=\d)/, '')));
-  };
-  const key = 'rounded-lg bg-felt-3 font-cond font-bold active:bg-line';
-  return (
-    <div className="absolute inset-0 z-20 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.6cqh, 22px)' }}>
-      <div className="flex items-center gap-[1.2cqw]">
-        {(['set', 'gain', 'lose'] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`rounded-full px-[0.8em] py-[0.25em] ${mode === m ? 'bg-brass font-semibold text-felt' : 'bg-felt-3 text-bone/80'}`}
-          >
-            {m === 'set' ? 'Set' : m === 'gain' ? 'Gain' : 'Lose'}
-          </button>
-        ))}
-        <div className="ml-auto text-right font-cond font-bold tabular-nums">
-          <span className="text-dim">{life} → </span>
-          <span className={digits ? 'text-bone' : 'text-dim'}>{digits ? result : '…'}</span>
-        </div>
-      </div>
-      <div className="grid min-h-0 flex-1 grid-cols-6 gap-[1cqh]">
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => (
-          <button key={k} onClick={() => press(k)} className={`${key} text-[1.4em]`}>
-            {k}
-          </button>
-        ))}
-        <button onClick={() => press('back')} className={`${key} text-[1.1em] text-dim`} aria-label="Delete digit">
-          ⌫
-        </button>
-        <button onClick={onClose} className={`${key} text-[0.8em] font-sans font-semibold text-dim`}>
-          Back
-        </button>
-      </div>
-      <button
-        disabled={!digits}
-        onClick={() => onApply(result)}
-        className="rounded-lg bg-brass py-[1.2cqh] font-semibold text-felt disabled:opacity-40"
-      >
-        {mode === 'set' ? `Set life to ${digits ? result : '…'}` : mode === 'gain' ? `Gain ${n || '…'}` : `Lose ${n || '…'}`}
-      </button>
-    </div>
-  );
-}
-
 /** Running total of recent life changes, cleared after a pause. */
 function useDelta(life: number) {
   const prev = useRef(life);
@@ -695,137 +593,97 @@ function cmdrSources(game: LiveGame, seat: number) {
   });
 }
 
-function CounterPanel({
-  game,
-  seat,
-  dispatch,
-  close,
-  open,
-}: {
-  game: LiveGame;
-  seat: number;
-  dispatch: (a: Action) => void;
-  close: () => void;
-  open: (s: SheetKind) => void;
-}) {
+/**
+ * Counters: in Commander, one panel per commander, each sitting where its player sits at the
+ * table (a partner pair splits its panel in half). Poison, * and monarch stay small along the bottom.
+ */
+function CounterPanel({ game, seat, rot, dispatch, close }: { game: LiveGame; seat: number; rot: Rot; dispatch: (a: Action) => void; close: () => void }) {
   const p = game.players[seat];
-  const isCmdr = game.config.format === 'commander';
   const extraName = game.config.extraCounter?.trim();
-  // the commander that has hit this player hardest, shown on the button
-  const worst = isCmdr
-    ? cmdrSources(game, seat).reduce<{ v: number; who: string } | null>((best, s) => {
-        const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
-        return v > (best?.v ?? 0) ? { v, who: s.who } : best;
-      }, null)
-    : null;
-  const big = 'relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-xl bg-felt-3 px-2 text-center active:bg-line';
+  const isCmdr = game.config.format === 'commander';
+  const areas = turnAreas(getLayout(game.config.layoutId).areas, rot);
+  const sources = cmdrSources(game, seat);
+  const king = game.monarchSeat === seat;
+  const poison = { label: 'Poison', value: p.poison, lethal: p.poison >= POISON_LETHAL, onPlus: () => dispatch({ t: 'poison', seat, d: 1 }), onMinus: () => dispatch({ t: 'poison', seat, d: -1 }) };
+  const star = extraName && { label: extraName, value: p.extra ?? 0, lethal: false, onPlus: () => dispatch({ t: 'extra', seat, d: 1 }), onMinus: () => dispatch({ t: 'extra', seat, d: -1 }) };
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(14px, 3.8cqh, 22px)' }}>
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.5cqh]" style={{ gridAutoRows: '1fr' }}>
-        <button onClick={() => (buzz(), open('keypad'))} className={big} aria-label="Set, gain or lose life">
-          <div className="absolute inset-x-0 top-0 h-[3px] bg-brass" />
-          <span className="font-semibold leading-tight">Life</span>
-          <span className="text-[0.8em] text-dim">Tap to set · gain · lose</span>
-          <span className="font-cond font-bold leading-none tabular-nums" style={{ fontSize: '2.8em' }}>
-            {p.life}
-          </span>
-        </button>
-        {isCmdr && (
-          <button onClick={() => (buzz(), open('cmdr'))} className={big} aria-label="Commander damage">
-            <div className="absolute inset-x-0 top-0 h-[3px] bg-bone/60" />
-            <span className="flex items-center gap-1.5 font-semibold leading-tight">
-              <Sword size="1em" /> Commander damage
-            </span>
-            <span className="w-full truncate text-[0.8em] text-dim">{!worst ? 'Tap to pick a commander' : worst.who.startsWith('from') ? `Most ${worst.who}` : 'Most from your own commander'}</span>
-            <span className={`font-cond font-bold leading-none tabular-nums ${(worst?.v ?? 0) >= cmdrLethal(game.config) ? 'text-blood' : ''}`} style={{ fontSize: '2.8em' }}>
-              {worst?.v ?? 0}
-            </span>
-          </button>
-        )}
-        <Tile
-          label="Poison"
-          who={`${POISON_LETHAL} is lethal`}
-          value={p.poison}
-          lethal={p.poison >= POISON_LETHAL}
-          stripe={[manaVar.G]}
-          onPlus={() => dispatch({ t: 'poison', seat, d: 1 })}
-          onMinus={() => dispatch({ t: 'poison', seat, d: -1 })}
-        />
-        {extraName && (
-          <Tile
-            label={extraName}
-            who="Misplays · + picks a reason"
-            value={p.extra ?? 0}
-            lethal={false}
-            stripe={[manaVar.R]}
-            onPlus={() => open('star')}
-            onMinus={() => dispatch({ t: 'extra', seat, d: -1 })}
-          />
-        )}
-      </div>
-      {!p.out && game.phase === 'playing' && (
-        <div className="grid h-[11cqh] min-h-11 grid-cols-3 gap-[1.5cqh]">
-          <TwoTap
-            label="Win"
-            className="bg-brass/20 text-brass"
-            onConfirm={() => {
-              dispatch({ t: 'win', seat });
-              close();
-            }}
-          />
-          <TwoTap
-            label="Lose"
-            className="bg-felt-3 text-bone/80"
-            onConfirm={() => {
-              dispatch({ t: 'out', seat, cause: 'lose' });
-              close();
-            }}
-          />
-          <TwoTap
-            label="Concede"
-            className="bg-felt-3 text-bone/80"
-            onConfirm={() => {
-              dispatch({ t: 'out', seat, cause: 'concede' });
-              close();
-            }}
-          />
+    <div className="absolute inset-0 z-10 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(13px, 3.6cqh, 22px)' }}>
+      {isCmdr ? (
+        <div
+          className="grid min-h-0 flex-1 gap-[1.5cqh]"
+          style={{
+            gridTemplateAreas: areas.map((r) => `"${r.join(' ')}"`).join(' '),
+            gridTemplateColumns: `repeat(${areas[0].length}, 1fr)`,
+            gridTemplateRows: `repeat(${areas.length}, 1fr)`,
+          }}
+        >
+          {game.config.players.map((_, i) => (
+            <div key={i} className={`grid min-h-0 auto-cols-fr grid-flow-col gap-[1cqh] rounded-xl ${i === seat ? 'ring-2 ring-brass/70' : ''}`} style={{ gridArea: seatLetter(i) }}>
+              {sources
+                .filter((s) => s.from === i)
+                .map((s) => {
+                  const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
+                  return (
+                    <Tile
+                      key={s.partner}
+                      label={s.label}
+                      who={s.who}
+                      value={v}
+                      lethal={v >= cmdrLethal(game.config)}
+                      stripe={s.colors}
+                      art={s.art}
+                      onPlus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: 1 })}
+                      onMinus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: -1 })}
+                    />
+                  );
+                })}
+            </div>
+          ))}
+        </div>
+      ) : (
+        // other formats have no commanders, so poison and * get the room
+        <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.5cqh]">
+          <Tile {...poison} who={`${POISON_LETHAL} is lethal`} stripe={[manaVar.G]} />
+          {star && <Tile {...star} who="Misplays" stripe={[manaVar.R]} />}
         </div>
       )}
-      <button className="h-[11cqh] min-h-11 shrink-0 rounded-xl bg-brass text-[1.15em] font-semibold text-felt active:bg-brass-2" onClick={close}>
-        Done
-      </button>
+      <div className="flex h-[11cqh] min-h-11 shrink-0 items-stretch gap-[1.2cqh]">
+        {isCmdr && <Mini {...poison} />}
+        {isCmdr && star && <Mini {...star} />}
+        <button
+          onClick={() => (buzz(), dispatch({ t: 'monarch', seat }))}
+          aria-pressed={king}
+          aria-label={king ? 'Monarch. Tap to take the crown off' : 'Tap to become the monarch'}
+          className={`flex items-center gap-[0.4em] rounded-full px-[0.9em] text-[0.85em] ${king ? 'bg-brass text-felt' : 'bg-felt-3 text-bone/70'}`}
+        >
+          <Crown size="1.2em" /> Monarch
+        </button>
+        <div className="flex-1" />
+        {!p.out && game.phase === 'playing' && (
+          <>
+            <TwoTap label="Win" className="bg-brass/20 px-[0.9em] text-[0.85em] text-brass" onConfirm={() => (dispatch({ t: 'win', seat }), close())} />
+            <TwoTap label="Lose" className="bg-felt-3 px-[0.9em] text-[0.85em] text-bone/80" onConfirm={() => (dispatch({ t: 'out', seat, cause: 'lose' }), close())} />
+            <TwoTap label="Concede" className="bg-felt-3 px-[0.9em] text-[0.85em] text-bone/80" onConfirm={() => (dispatch({ t: 'out', seat, cause: 'concede' }), close())} />
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-/** Commander damage: one tile per commander at the table, with its art, split − / + like the life total. */
-function CmdrPanel({ game, seat, dispatch, done }: { game: LiveGame; seat: number; dispatch: (a: Action) => void; done: () => void }) {
-  const p = game.players[seat];
-  const sources = cmdrSources(game, seat);
-  const cols = sources.length <= 2 ? 1 : sources.length <= 4 ? 2 : 3;
+/** A small − count + pill for the bottom strip. */
+function Mini({ label, value, lethal, onPlus, onMinus }: { label: string; value: number; lethal: boolean; onPlus: () => void; onMinus: () => void }) {
   return (
-    <div className="absolute inset-0 z-10 flex flex-col gap-[1.5cqh] p-[2.5cqh]" style={{ fontSize: 'clamp(14px, 3.8cqh, 22px)' }}>
-      <div className="grid min-h-0 flex-1 gap-[1.5cqh]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridAutoRows: '1fr' }}>
-        {sources.map((s) => {
-          const v = p.cmdr[`${s.from}:${s.partner}`] ?? 0;
-          return (
-            <Tile
-              key={`${s.from}:${s.partner}`}
-              label={s.label}
-              who={s.who}
-              value={v}
-              lethal={v >= cmdrLethal(game.config)}
-              stripe={s.colors}
-              art={s.art}
-              onPlus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: 1 })}
-              onMinus={() => dispatch({ t: 'cmdr', seat, from: s.from, partner: s.partner, d: -1 })}
-            />
-          );
-        })}
-      </div>
-      <button className="h-[11cqh] min-h-11 shrink-0 rounded-xl bg-brass text-[1.15em] font-semibold text-felt active:bg-brass-2" onClick={done}>
-        Done
+    <div className={`flex items-center rounded-full bg-felt-3 ${lethal ? 'ring-2 ring-blood' : ''}`}>
+      <button onClick={() => (buzz(), onMinus())} aria-label={`Remove ${label}`} className="h-full pl-[0.9em] pr-[0.5em] font-cond text-[1.3em] text-bone/50">
+        −
+      </button>
+      <span className="whitespace-nowrap text-[0.85em] text-bone/80">
+        {label} <b className={`font-cond text-[1.3em] tabular-nums ${lethal ? 'text-blood' : 'text-bone'}`}>{value}</b>
+      </span>
+      <button onClick={() => (buzz(), onPlus())} aria-label={`Add ${label}`} className="h-full pl-[0.5em] pr-[0.9em] font-cond text-[1.3em] text-bone/50">
+        +
       </button>
     </div>
   );
