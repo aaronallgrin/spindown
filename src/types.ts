@@ -26,8 +26,8 @@ export const SUB_FORMATS: Record<Exclude<Format, 'commander'>, SubFormat[]> = {
     { name: 'Oathbreaker', life: 20 },
     // always one shared blue deck, 20 life each
     { name: 'Dandân', life: 20, shared: { deckName: 'Shared Dandân deck', colors: ['U'] } },
-    // a deck is one opened pack: just its set
-    { name: 'Pai Gow', life: 20, fields: { deck: 'Set of your pack, like Bloomburrow', theme: null } },
+    // a deck is one opened pack: just its set, 5 life each
+    { name: 'Pai Gow', life: 5, fields: { deck: 'Set of your pack, like Bloomburrow', theme: null } },
     { name: 'Casual', life: 20 },
   ],
 };
