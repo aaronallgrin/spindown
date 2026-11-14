@@ -66,6 +66,12 @@ export default function Stats() {
   const fair = games.length ? games.reduce((a, g) => a + 1 / g.playerCount, 0) / games.length : 0;
   const forPlayer = f.player === 'all' ? games : games.map((g) => ({ ...g, players: g.players.filter((p) => p.name === f.player) }));
   const isCmdr = f.format === 'commander' || (f.format === 'all' && games.some((g) => g.format === 'commander'));
+  // commander sections only count Commander games and players who logged a commander,
+  // so shared decks (Dandân), set names and plain color labels never show up there
+  const cmdrOnly = forPlayer
+    .filter((g) => g.format === 'commander')
+    .map((g) => ({ ...g, players: g.players.filter((p) => p.commander) }));
+  const deckGames = isCmdr ? cmdrOnly : forPlayer;
 
   if (all === undefined)
     return (
@@ -143,7 +149,7 @@ export default function Stats() {
           </Section>
 
           <Section title={isCmdr ? 'Commander win rate' : 'Deck win rate'} note="Most wins first. Tap a name to see the card.">
-            {byDeck(forPlayer)
+            {byDeck(deckGames)
               .slice(0, 15)
               .map((r) => (
                 <RateRow
@@ -171,7 +177,7 @@ export default function Stats() {
           </Section>
 
           <Section title="Commander color win rate" note="By how many colors the commander has.">
-            {byColorCount(forPlayer).map((r) => (
+            {byColorCount(deckGames).map((r) => (
               <RateRow key={r.key} row={r} fair={fair} />
             ))}
           </Section>
