@@ -81,6 +81,7 @@ export type Action =
   | { t: 'poison'; seat: number; d: number }
   | { t: 'cmdr'; seat: number; from: number; partner: 0 | 1; d: number }
   | { t: 'monarch'; seat: number }
+  | { t: 'attack'; seat: number }
   | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
@@ -172,7 +173,9 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
   switch (a.t) {
     case 'life': {
       const n = patch(g, a.seat, (p) => ({ ...p, life: p.life + a.d }));
-      return { ...n, events: log(g, { kind: 'life', seat: a.seat, delta: a.d }) };
+      // life lost while someone is attacking is credited to the attacker
+      const from = a.d < 0 && g.attackerSeat != null && g.attackerSeat !== a.seat ? g.attackerSeat : undefined;
+      return { ...n, events: log(g, { kind: 'life', seat: a.seat, delta: a.d, from }) };
     }
     case 'setLife': {
       const d = a.value - g.players[a.seat].life;
@@ -212,6 +215,9 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const seat = g.monarchSeat === a.seat ? null : a.seat;
       return { ...g, monarchSeat: seat, events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: seat ?? -1, kind: 'monarch' }] };
     }
+    case 'attack':
+      // one attacker at a time; tapping them again ends the attack
+      return { ...g, attackerSeat: g.attackerSeat === a.seat ? null : a.seat };
     case 'seatInfo': {
       // 'over' too: a quick-start game gets its names and decks after the last hit.
       // Mid-game only the deck can change (a forgotten commander), never the name.
@@ -258,6 +264,7 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         ...g,
         round,
         turn: round,
+        attackerSeat: null,
         events: [...g.events, { at: Date.now(), round, turn: round, seat: -1, kind: 'turn', delta: a.d }],
       };
     }
@@ -270,6 +277,7 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const withLog = {
         ...n,
         monarchSeat: g.monarchSeat === a.seat ? null : g.monarchSeat,
+        attackerSeat: g.attackerSeat === a.seat ? null : g.attackerSeat,
         events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'out' as const, cause: a.cause }],
       };
       return finishIfOver(withLog);

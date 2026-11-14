@@ -154,7 +154,8 @@ export default function Play() {
     await saveAndClose();
     if (rematch) start(cfg);
   };
-  const pads = centerPads(layout, w, h, d20Size);
+  // keep names clear of the die's whole tap ring (SpinDie pads it by 0.55 × size each side), so tapping a name never turns the round
+  const pads = centerPads(layout, w, h, d20Size * 2.1);
 
   return (
     <div className="table-root">
