@@ -9,7 +9,7 @@ import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
 import { cmdrEgg, lifeEgg, poisonEgg, shame, type Egg } from '../eggs';
 
-export type SheetKind = 'panel' | 'keypad' | 'events' | 'star' | 'cmdr';
+export type SheetKind = 'panel' | 'keypad' | 'events' | 'cmdr';
 
 interface Props {
   game: LiveGame;
@@ -96,7 +96,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
     }
   });
   const star = usePress(
-    () => setSheet('star'),
+    () => (buzz(), dispatch({ t: 'extra', seat, d: 1 })),
     () => dispatch({ t: 'extra', seat, d: -1 }),
     500,
     1e9,
@@ -246,7 +246,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
             {extraName && (
               <button
                 {...star}
-                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to pick a reason, hold to take one back`}
+                aria-label={`${extraName} counter, ${p.extra ?? 0}. Tap to add one, hold to take one back`}
                 className={`flex h-[2.6em] min-w-[2.6em] items-center justify-center gap-[0.15em] rounded-full px-[0.6em] font-cond font-bold ${
                   (p.extra ?? 0) > 0 ? 'bg-brass text-felt' : 'bg-black/60 text-bone/80'
                 }`}
@@ -432,8 +432,6 @@ export function SeatSheet({
               />
             ) : kind === 'cmdr' ? (
               <CmdrPanel game={game} seat={seat} dispatch={dispatch} done={() => setSheet('panel')} />
-            ) : kind === 'star' ? (
-              <StarPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : kind === 'events' ? (
               <EventsPanel game={game} seat={seat} dispatch={dispatch} close={close} />
             ) : (
@@ -441,43 +439,6 @@ export function SeatSheet({
             )}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-const STAR_REASONS = ['Misplay', 'Take-back', 'Slow play', 'Missed trigger', 'Forgot something', 'Other'];
-
-/** Tapping the * opens this: what the * means, and why this one was earned. */
-function StarPanel({ game, seat, dispatch, close }: { game: LiveGame; seat: number; dispatch: (a: Action) => void; close: () => void }) {
-  const name = game.config.extraCounter?.trim() ?? '*';
-  const count = game.players[seat].extra ?? 0;
-  const tally = new Map<string, number>();
-  for (const e of game.events)
-    if (e.kind === 'extra' && e.seat === seat && e.note) tally.set(e.note, (tally.get(e.note) ?? 0) + (e.delta ?? 0));
-  const so = [...tally].filter(([, n]) => n > 0).map(([r, n]) => (n > 1 ? `${r} ×${n}` : r));
-  return (
-    <div className="absolute inset-0 flex flex-col p-[2.5cqh]" style={{ fontSize: 'clamp(12px, 3.2cqh, 20px)' }}>
-      <p className="mb-[1.5cqh] text-bone/80">
-        A <span className="font-cond font-bold text-brass">{name}</span> marks a mistake. What happened?
-        {so.length > 0 && <span className="block text-[0.85em] text-dim">This game: {so.join(', ')}</span>}
-      </p>
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.5cqh]">
-        {STAR_REASONS.map((r) => (
-          <button key={r} onClick={() => (buzz(), dispatch({ t: 'extra', seat, d: 1, note: r }), close())} className="rounded-lg bg-felt-3 px-2 font-semibold active:bg-line">
-            {r}
-          </button>
-        ))}
-      </div>
-      <div className="mt-[2cqh] flex gap-2 [&>*]:flex-1">
-        {count > 0 && (
-          <button className="rounded-lg bg-felt-3 px-3 py-[1.6cqh] text-bone/80" onClick={() => (dispatch({ t: 'extra', seat, d: -1 }), close())}>
-            Take one back
-          </button>
-        )}
-        <button className="rounded-lg bg-brass px-3 py-[1.6cqh] font-semibold text-felt" onClick={close}>
-          Cancel
-        </button>
       </div>
     </div>
   );
@@ -755,11 +716,11 @@ function CounterPanel({
         {extraName && (
           <Tile
             label={extraName}
-            who="Misplays · + picks a reason"
+            who="Misplays"
             value={p.extra ?? 0}
             lethal={false}
             stripe={[manaVar.R]}
-            onPlus={() => open('star')}
+            onPlus={() => dispatch({ t: 'extra', seat, d: 1 })}
             onMinus={() => dispatch({ t: 'extra', seat, d: -1 })}
           />
         )}

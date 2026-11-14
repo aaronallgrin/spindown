@@ -124,8 +124,6 @@ export interface GameEvent {
   from?: number;
   partner?: 0 | 1;
   cause?: OutCause;
-  /** why a * was given (misplay, slow…), for kind 'extra' */
-  note?: string;
   /** easter egg id, for kind 'egg' */
   egg?: string;
 }

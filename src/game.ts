@@ -83,7 +83,7 @@ export type Action =
   | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
-  | { t: 'extra'; seat: number; d: number; note?: string }
+  | { t: 'extra'; seat: number; d: number }
   | { t: 'mark'; seat: number; kind: DandanMark; d: 1 | -1 }
   | { t: 'round'; d: 1 | -1 }
   | { t: 'out'; seat: number; cause: OutCause }
@@ -123,7 +123,6 @@ function log(g: LiveGame, e: Omit<GameEvent, 'at' | 'round' | 'turn'>): GameEven
     last.seat === e.seat &&
     last.from === e.from &&
     last.partner === e.partner &&
-    last.note === e.note &&
     last.turn === g.turn &&
     at - last.at < 4000 &&
     Math.sign(last.delta ?? 0) === Math.sign(e.delta ?? 0)
@@ -236,7 +235,7 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       const n = patch(g, a.seat, (p) => ({ ...p, extra: Math.max(0, (p.extra ?? 0) + a.d) }));
       const real = (n.players[a.seat].extra ?? 0) - (g.players[a.seat].extra ?? 0);
       if (!real) return g;
-      return { ...n, events: log(g, { kind: 'extra', seat: a.seat, delta: real, note: a.note }) };
+      return { ...n, events: log(g, { kind: 'extra', seat: a.seat, delta: real }) };
     }
     case 'mark': {
       if (g.phase !== 'playing') return g;
@@ -359,16 +358,4 @@ export function toRecord(g: LiveGame): GameRecord {
     config: g.config,
     synced: 0,
   };
-}
-
-/** The reasons behind a player's * counters, oldest first. A take-back removes their latest one. */
-export function starReasons(events: GameEvent[], seat: number): { note?: string; round: number }[] {
-  const out: { note?: string; round: number }[] = [];
-  for (const e of events) {
-    if (e.kind !== 'extra' || e.seat !== seat) continue;
-    const d = e.delta ?? 0;
-    for (let i = 0; i < d; i++) out.push({ note: e.note, round: e.round });
-    if (d < 0) out.splice(Math.max(0, out.length + d));
-  }
-  return out;
 }

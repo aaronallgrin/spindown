@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lethalCause, makeConfig, needsNames, newGame, quickName, reduce, starReasons, toRecord, turnOrder, type Action } from './game';
+import { lethalCause, makeConfig, needsNames, newGame, quickName, reduce, toRecord, turnOrder, type Action } from './game';
 import { recapText } from './recap';
 import { packUndo, unpackUndo } from './undoStore';
 import type { LiveGame } from './types';
@@ -65,26 +65,6 @@ describe('counters', () => {
     const g = run(started(), { t: 'poison', seat: 1, d: -1 }, { t: 'cmdr', seat: 1, from: 0, partner: 0, d: -3 });
     expect(g.players[1].poison).toBe(0);
     expect(g.players[1].life).toBe(40);
-  });
-
-  it('keeps the reason for each * and never merges different reasons', () => {
-    const g = run(started(), { t: 'extra', seat: 1, d: 1, note: 'Misplay' }, { t: 'extra', seat: 1, d: 1, note: 'Slow' });
-    expect(g.players[1].extra).toBe(2);
-    expect(g.events.filter((e) => e.kind === 'extra').map((e) => e.note)).toEqual(['Misplay', 'Slow']);
-  });
-
-  it('lists * reasons with take-backs removing the latest', () => {
-    const g = run(
-      started(),
-      { t: 'extra', seat: 1, d: 1, note: 'Misplay' },
-      { t: 'round', d: 1 },
-      { t: 'extra', seat: 1, d: 1, note: 'Slow play' },
-      { t: 'extra', seat: 1, d: -1 },
-      { t: 'extra', seat: 1, d: 1, note: 'Take-back' },
-      { t: 'extra', seat: 2, d: 1 },
-    );
-    expect(starReasons(g.events, 1)).toEqual([{ note: 'Misplay', round: 1 }, { note: 'Take-back', round: 2 }]);
-    expect(starReasons(g.events, 2)).toEqual([{ note: undefined, round: 2 }]);
   });
 
   it('finds lethal from life, poison and 21 from one commander', () => {
