@@ -6,6 +6,14 @@ import { Btn, Page, Pips, fmtDate, gameVT } from '../ui';
 import StatsTabs from '../components/StatsTabs';
 
 const fmtLabel = { commander: 'Commander', constructed: 'Constructed', other: 'Other' };
+/** Formats where the deck box holds the set (or cube) everyone played, e.g. Bloomburrow. */
+const SET_FORMATS = new Set(['Pai Gow', 'Draft', 'Sealed', 'Cube']);
+/** "Bloomburrow" if every pack matches, "Bloomburrow / Foundations" if they differ. */
+const releaseOf = (g: { config: { subFormat?: string }; players: { deckName?: string }[] }) => {
+  if (!SET_FORMATS.has(g.config.subFormat ?? '')) return '';
+  const names = [...new Set(g.players.map((p) => p.deckName?.trim()).filter(Boolean))];
+  return names.length ? `${names.join(' / ')}, ` : '';
+};
 
 export default function History() {
   const games = useLiveQuery(() => db.games.orderBy('startedAt').reverse().toArray(), []);
@@ -65,7 +73,7 @@ export default function History() {
               <span className="shrink-0 text-sm text-dim">{fmtDate(g.startedAt)}</span>
             </div>
             <div className="mb-2 text-sm text-dim">
-              {g.config.subFormat ?? fmtLabel[g.format]}, {g.config.league ? `${g.config.league}, ` : ''}{g.playerCount} players, {g.rounds ? `${g.rounds} ${g.rounds === 1 ? 'round' : 'rounds'}, ` : ''}{g.imported ? 'from the old spreadsheet' : `${g.durationMin} min`}
+              {g.config.subFormat ?? fmtLabel[g.format]}, {releaseOf(g)}{g.config.league ? `${g.config.league}, ` : ''}{g.playerCount} players, {g.rounds ? `${g.rounds} ${g.rounds === 1 ? 'round' : 'rounds'}, ` : ''}{g.imported ? 'from the old spreadsheet' : `${g.durationMin} min`}
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
               {[...g.players]
