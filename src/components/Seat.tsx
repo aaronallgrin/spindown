@@ -102,14 +102,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
     1e9,
   );
   // hold your name to fix your deck mid-game (a forgotten commander)
-  // tap your name to attack (others' life loss is credited to you), hold it to fix your deck
-  const attacking = game.attackerSeat === seat;
-  const nameHold = usePress(
-    () => game.phase === 'playing' && !p.out && (buzz(), dispatch({ t: 'attack', seat })),
-    game.phase === 'playing' ? onEdit : undefined,
-    600,
-    1e9,
-  );
+  const nameHold = usePress(() => {}, game.phase === 'playing' ? onEdit : undefined, 600, 1e9);
 
   const minus = usePress(
     () => dispatch({ t: 'life', seat, d: -1 }),
@@ -153,16 +146,11 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
               <button
                 type="button"
                 {...nameHold}
-                aria-label={`${setup.name}${attacking ? ', attacking' : ''}. Tap to ${attacking ? 'stop attacking' : 'attack'}, hold to change your commander or deck`}
+                aria-label={`${setup.name}. Hold to change your commander or deck`}
                 className="relative z-10 block max-w-full text-left"
               >
-              <div className="flex items-center gap-[0.4em] font-semibold" style={{ fontSize: 'clamp(13px, 8cqh, 26px)' }}>
-                <span className="truncate">{setup.name}</span>
-                {attacking && (
-                  <span className="flex shrink-0 items-center gap-[0.25em] rounded-full bg-brass px-[0.5em] text-[0.6em] text-felt">
-                    <Sword size="1em" /> Attacking
-                  </span>
-                )}
+              <div className="truncate font-semibold" style={{ fontSize: 'clamp(13px, 8cqh, 26px)' }}>
+                {setup.name}
               </div>
               {whisper ? (
                 // easter eggs borrow the commander line for a few seconds
@@ -191,7 +179,6 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
           {/* life with tap halves */}
           {flash && <div key={flash.key} className={`life-flash ${flash.gain ? 'gain' : 'loss'}`} aria-hidden />}
           {danger && <div className="danger-edge" aria-hidden />}
-          {attacking && <div className="attack-edge" aria-hidden />}
 
           <div className="absolute inset-0 flex">
             <button aria-label={`${setup.name} lose 1 life`} className="half half-l flex-1" {...minus}>
