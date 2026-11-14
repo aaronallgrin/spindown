@@ -206,4 +206,13 @@ describe('Pauper Commander', () => {
     expect(run(g, { t: 'monarch', seat: 2 }).monarchSeat).toBeNull();
     expect(run(g, { t: 'out', seat: 2, cause: 'lose' }).monarchSeat).toBeNull();
   });
+
+  it('credits life lost during an attack to the attacker, until the round moves on', () => {
+    const g = run(started(), { t: 'attack', seat: 0 }, { t: 'life', seat: 1, d: -3 }, { t: 'life', seat: 2, d: -2 }, { t: 'life', seat: 0, d: -1 }, { t: 'life', seat: 3, d: 2 });
+    const life = g.events.filter((e) => e.kind === 'life');
+    expect(life.map((e) => [e.seat, e.delta, e.from])).toEqual([[1, -3, 0], [2, -2, 0], [0, -1, undefined], [3, 2, undefined]]);
+    const next = run(g, { t: 'round', d: 1 }, { t: 'life', seat: 1, d: -1 });
+    expect(next.attackerSeat).toBeNull();
+    expect(next.events.at(-1)).toMatchObject({ kind: 'life', seat: 1, from: undefined });
+  });
 });

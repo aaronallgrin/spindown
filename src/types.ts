@@ -145,6 +145,8 @@ export interface LiveGame {
   turn: number;
   /** who holds the monarch's crown; missing on games started before it came back */
   monarchSeat?: number | null;
+  /** who is attacking right now: life others lose is credited to them; ends with the round */
+  attackerSeat?: number | null;
   players: LivePlayer[];
   events: GameEvent[];
   winnerSeat: number | null;
