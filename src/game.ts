@@ -173,8 +173,8 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
   switch (a.t) {
     case 'life': {
       const n = patch(g, a.seat, (p) => ({ ...p, life: p.life + a.d }));
-      // life lost while someone is attacking is credited to the attacker
-      const from = a.d < 0 && g.attackerSeat != null && g.attackerSeat !== a.seat ? g.attackerSeat : undefined;
+      // life changes on others while someone is attacking are credited to the attacker (a +1 is usually a fixed mis-tap)
+      const from = g.attackerSeat != null && g.attackerSeat !== a.seat ? g.attackerSeat : undefined;
       return { ...n, events: log(g, { kind: 'life', seat: a.seat, delta: a.d, from }) };
     }
     case 'setLife': {
