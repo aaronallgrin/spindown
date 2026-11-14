@@ -518,7 +518,7 @@ function Grudges({ games }: { games: GameRecord[] }) {
   if (!aggressive.some((r) => r.total > 0))
     return (
       <Section title="Grudges">
-        <p className="px-2 py-2 text-sm text-dim">No damage tracked yet. Commander damage counts, and so does life lost while a player is attacking (tap your name on the table).</p>
+        <p className="px-2 py-2 text-sm text-dim">No commander damage yet.</p>
       </Section>
     );
   // the six busiest players keep the chart readable on a phone
@@ -532,7 +532,7 @@ function Grudges({ games }: { games: GameRecord[] }) {
   const top = ranked[0].avg || 1;
   return (
     <>
-      <Section title="Grudges" note="Damage dealt: commander damage, plus life lost while a player was attacking. Each row hits each column.">
+      <Section title="Grudges" note="Commander damage dealt. Each row hits each column.">
         <div className="grid gap-[3px] p-1 text-xs" style={{ gridTemplateColumns: `minmax(3.5rem, auto) repeat(${who.length}, minmax(0, 1fr))` }}>
           <div />
           {who.map((t) => (
@@ -567,7 +567,7 @@ function Grudges({ games }: { games: GameRecord[] }) {
         )}
       </Section>
 
-      <Section title="Most aggressive" note="Average damage dealt per game, in games where damage was tracked. Ranked after 3 games.">
+      <Section title="Most aggressive" note="Average commander damage dealt per game. Ranked after 3 games.">
         {ranked.map((r, i) => (
           <div key={r.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-2 py-2">
             <div className="min-w-0">

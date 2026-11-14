@@ -210,8 +210,8 @@ export const ordinal = (n: number) => `${n}${['th', 'st', 'nd', 'rd'][n % 10 > 3
 export const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 /**
- * Who hits whom: commander damage, plus life lost while a player was marked as attacking.
- * Average per game counts only games where some damage was credited, so older games don't dilute it.
+ * Who hits whom, from commander damage (the only damage whose source is always recorded).
+ * Average per game counts only games with some commander damage, so they aren't diluted by games without it.
  */
 export function grudges(games: GameRecord[]) {
   const dmg = new Map<string, Map<string, number>>(); // attacker → target → damage
@@ -220,10 +220,10 @@ export function grudges(games: GameRecord[]) {
     const name = new Map(g.players.map((p) => [p.seat, p.name]));
     const inGame = new Map<string, number>(); // "attacker|target" → damage this game
     for (const e of g.events) {
-      if (e.from == null || e.from === e.seat || !e.delta) continue;
-      const d = e.kind === 'cmdr' ? e.delta : e.kind === 'life' ? -e.delta : 0;
+      if (e.kind !== 'cmdr' || e.from == null || e.from === e.seat || !e.delta) continue;
+      const d = e.delta;
       const a = name.get(e.from), t = name.get(e.seat);
-      if (!d || !a || !t) continue;
+      if (!a || !t) continue;
       inGame.set(`${a}|${t}`, (inGame.get(`${a}|${t}`) ?? 0) + d);
     }
     if (!inGame.size) continue;

@@ -12,15 +12,14 @@ function game(...as: Action[]) {
 }
 
 describe('grudges', () => {
-  it('adds commander damage and attack damage, nets out fixed mis-taps, skips your own commander', () => {
+  it('counts commander damage by source, nets out fixes, skips your own commander and plain life loss', () => {
     const g = game(
       { t: 'cmdr', seat: 0, from: 1, partner: 0, d: 5 },
-      { t: 'cmdr', seat: 1, from: 1, partner: 0, d: 2 },
-      { t: 'attack', seat: 1 },
-      { t: 'life', seat: 0, d: -4 },
-      { t: 'life', seat: 2, d: -3 },
-      { t: 'life', seat: 2, d: 1 },
+      { t: 'cmdr', seat: 0, from: 1, partner: 0, d: 4 },
+      { t: 'cmdr', seat: 2, from: 1, partner: 0, d: 3 },
       { t: 'round', d: 1 },
+      { t: 'cmdr', seat: 2, from: 1, partner: 0, d: -1 },
+      { t: 'cmdr', seat: 1, from: 1, partner: 0, d: 2 },
       { t: 'life', seat: 3, d: -6 },
     );
     const { dmg, aggressive } = grudges([g, game()]);
@@ -28,7 +27,7 @@ describe('grudges', () => {
     expect(dmg.get('Tim')?.get('Chris')).toBe(2);
     expect(dmg.get('Tim')?.has('Tim')).toBe(false);
     expect(dmg.get('Tim')?.has('Cody')).toBe(false);
-    // the empty second game doesn't count toward the average
+    // the second game had no commander damage, so it doesn't count toward the average
     expect(aggressive[0]).toMatchObject({ name: 'Tim', games: 1, total: 11, avg: 11, fav: 'Aaron' });
   });
 });
