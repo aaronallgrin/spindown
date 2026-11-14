@@ -11,6 +11,7 @@ import {
   bySubFormat,
   byTurnOrder,
   fastestWins,
+  grudges,
   headToHead,
   outCauses,
   pct,
@@ -175,6 +176,8 @@ export default function Stats() {
             ))}
           </Section>
 
+
+          <Grudges games={games} />
 
           <CountSection title="How players went out" rows={outCauses(forPlayer)} />
 
@@ -508,3 +511,80 @@ function TrophyCase({ games }: { games: GameRecord[] }) {
     </Section>
   );
 }
+
+/** Grudge chart (who hits whom) and the most aggressive players, from credited damage. */
+function Grudges({ games }: { games: GameRecord[] }) {
+  const { dmg, aggressive } = useMemo(() => grudges(games), [games]);
+  if (!aggressive.some((r) => r.total > 0))
+    return (
+      <Section title="Grudges">
+        <p className="px-2 py-2 text-sm text-dim">No damage tracked yet. Commander damage counts, and so does life lost while a player is attacking (tap your name on the table).</p>
+      </Section>
+    );
+  // the six busiest players keep the chart readable on a phone
+  const who = [...aggressive].sort((a, b) => b.total - a.total).slice(0, 6).map((r) => r.name);
+  const at = (a: string, t: string) => dmg.get(a)?.get(t) ?? 0;
+  const max = Math.max(1, ...who.flatMap((a) => who.map((t) => at(a, t))));
+  let big = { a: '', t: '', d: 0 };
+  for (const [a, row] of dmg) for (const [t, d] of row) if (d > big.d) big = { a, t, d };
+  // a game or two is too small a sample to rank, unless nobody has more
+  const ranked = aggressive.some((r) => r.games >= 3) ? aggressive.filter((r) => r.games >= 3) : aggressive;
+  const top = ranked[0].avg || 1;
+  return (
+    <>
+      <Section title="Grudges" note="Damage dealt: commander damage, plus life lost while a player was attacking. Each row hits each column.">
+        <div className="grid gap-[3px] p-1 text-xs" style={{ gridTemplateColumns: `minmax(3.5rem, auto) repeat(${who.length}, minmax(0, 1fr))` }}>
+          <div />
+          {who.map((t) => (
+            <div key={t} className="truncate text-center text-dim">{t}</div>
+          ))}
+          {who.map((a) => (
+            <div key={a} className="contents">
+              <div className="flex items-center truncate pr-1 text-dim">{a}</div>
+              {who.map((t) => {
+                const d = at(a, t);
+                const heat = d / max;
+                return a === t ? (
+                  <div key={t} className="h-8 rounded border border-dashed border-line" aria-hidden />
+                ) : (
+                  <div
+                    key={t}
+                    className={`flex h-8 items-center justify-center rounded font-cond text-base font-bold tabular-nums ${heat > 0.5 ? 'text-felt' : ''}`}
+                    style={{ background: `rgb(255 163 26 / ${(0.1 + 0.9 * heat).toFixed(2)})` }}
+                    aria-label={`${a} dealt ${d} to ${t}`}
+                  >
+                    {d}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {big.d > 0 && (
+          <p className="px-2 pt-2 pb-1 text-sm">
+            Biggest grudge: <span className="font-semibold">{big.a} → {big.t}</span> <span className="text-dim">({big.d} damage)</span>
+          </p>
+        )}
+      </Section>
+
+      <Section title="Most aggressive" note="Average damage dealt per game, in games where damage was tracked. Ranked after 3 games.">
+        {ranked.map((r, i) => (
+          <div key={r.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-2 py-2">
+            <div className="min-w-0">
+              <div className="truncate font-semibold">{r.name}</div>
+              {r.fav && <div className="truncate text-xs text-dim">Favorite target: {r.fav}</div>}
+            </div>
+            <div className="text-right">
+              <span className="font-cond text-xl font-bold tabular-nums">{Math.round(r.avg)}</span>
+              <span className="ml-1.5 text-xs text-dim">{r.games} {r.games === 1 ? 'game' : 'games'}</span>
+            </div>
+            <div className="col-span-2 mt-1.5 h-1.5 rounded-full bg-felt-3" aria-hidden>
+              <div className={`h-full rounded-full bg-brass ${i ? 'opacity-60' : ''}`} style={{ width: `${(r.avg / top) * 100}%` }} />
+            </div>
+          </div>
+        ))}
+      </Section>
+    </>
+  );
+}
+

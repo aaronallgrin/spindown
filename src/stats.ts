@@ -208,3 +208,39 @@ export function headToHead(games: GameRecord[], a: string, b: string) {
 
 export const ordinal = (n: number) => `${n}${['th', 'st', 'nd', 'rd'][n % 10 > 3 || Math.floor((n % 100) / 10) === 1 ? 0 : n % 10]}`;
 export const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+/**
+ * Who hits whom: commander damage, plus life lost while a player was marked as attacking.
+ * Average per game counts only games where some damage was credited, so older games don't dilute it.
+ */
+export function grudges(games: GameRecord[]) {
+  const dmg = new Map<string, Map<string, number>>(); // attacker → target → damage
+  const played = new Map<string, number>();
+  for (const g of games) {
+    const name = new Map(g.players.map((p) => [p.seat, p.name]));
+    const inGame = new Map<string, number>(); // "attacker|target" → damage this game
+    for (const e of g.events) {
+      if (e.from == null || e.from === e.seat || !e.delta) continue;
+      const d = e.kind === 'cmdr' ? e.delta : e.kind === 'life' ? -e.delta : 0;
+      const a = name.get(e.from), t = name.get(e.seat);
+      if (!d || !a || !t) continue;
+      inGame.set(`${a}|${t}`, (inGame.get(`${a}|${t}`) ?? 0) + d);
+    }
+    if (!inGame.size) continue;
+    for (const p of g.players) played.set(p.name, (played.get(p.name) ?? 0) + 1);
+    for (const [k, d] of inGame) {
+      if (d <= 0) continue;
+      const [a, t] = k.split('|');
+      const row = dmg.get(a) ?? new Map<string, number>();
+      row.set(t, (row.get(t) ?? 0) + d);
+      dmg.set(a, row);
+    }
+  }
+  const aggressive = [...played].map(([name, n]) => {
+    const row = [...(dmg.get(name) ?? [])];
+    const total = row.reduce((s, [, d]) => s + d, 0);
+    const fav = row.sort((x, y) => y[1] - x[1])[0]?.[0];
+    return { name, games: n, total, avg: total / n, fav };
+  }).sort((a, b) => b.avg - a.avg);
+  return { dmg, aggressive };
+}
