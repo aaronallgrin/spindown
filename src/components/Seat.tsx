@@ -3,7 +3,8 @@ import { cmdrLethal, POISON_LETHAL, lethalCause, type Action } from '../game';
 import { getLayout, seatLetter, turnAreas, type Rot } from '../layouts';
 import { DANDAN_MARKS, isDandan, type LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
-import { Crown, Poison, Skull, Sword } from './icons';
+import { Crown, Mic, Poison, Skull, Sword } from './icons';
+import { canListen, listen, parseVoice } from '../voice';
 import { usePress } from './usePress';
 import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
@@ -101,8 +102,25 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
     500,
     1e9,
   );
+  // tap your name to say a change ("opponents take 3 and I gain 1"); you're the speaker and the source
+  const voiceOn = canListen && game.phase === 'playing' && !p.out;
+  const [heard, setHeard] = useState<string | null>(null);
+  const stopVoice = useRef<() => void>(undefined);
+  useEffect(() => () => stopVoice.current?.(), []);
+  const startVoice = () => {
+    if (heard != null) return stopVoice.current?.();
+    setHeard('');
+    stopVoice.current = listen(setHeard, (r) => {
+      setHeard(null);
+      if ('error' in r) return say(r.error);
+      const h = parseVoice(r.text, live.current, seat);
+      if ('error' in h) return say(h.error);
+      dispatch({ t: 'batch', actions: h.actions });
+      say(h.said);
+    });
+  };
   // hold your name to fix your deck mid-game (a forgotten commander)
-  const nameHold = usePress(() => {}, game.phase === 'playing' ? onEdit : undefined, 600, 1e9);
+  const nameHold = usePress(voiceOn ? startVoice : () => {}, game.phase === 'playing' ? onEdit : undefined, 600, 1e9);
 
   const minus = usePress(
     () => dispatch({ t: 'life', seat, d: -1 }),
@@ -146,11 +164,12 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
               <button
                 type="button"
                 {...nameHold}
-                aria-label={`${setup.name}. Hold to change your commander or deck`}
+                aria-label={`${setup.name}. ${voiceOn ? 'Tap to say a life change. ' : ''}Hold to change your commander or deck`}
                 className="relative z-10 block max-w-full text-left"
               >
-              <div className="truncate font-semibold" style={{ fontSize: 'clamp(13px, 8cqh, 26px)' }}>
-                {setup.name}
+              <div className="flex items-center gap-[0.3em] font-semibold" style={{ fontSize: 'clamp(13px, 8cqh, 26px)' }}>
+                <span className="truncate">{setup.name}</span>
+                {voiceOn && <Mic size="0.8em" className="shrink-0 text-bone/50" />}
               </div>
               {whisper ? (
                 // easter eggs borrow the commander line for a few seconds
@@ -265,6 +284,23 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
           </div>
 
           {showCoach && <Coach isCmdr={isCmdr} />}
+
+          {heard != null && (
+            <button
+              onClick={() => stopVoice.current?.()}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-[2cqh] bg-black/85 px-[6cqw] text-center"
+            >
+              <span className="mic-pulse grid aspect-square place-items-center rounded-full bg-brass text-felt" style={{ width: 'clamp(36px, 20cqh, 72px)' }}>
+                <Mic size="55%" />
+              </span>
+              <span className="line-clamp-2 font-cond font-bold" style={{ fontSize: 'clamp(14px, 8cqh, 28px)' }}>
+                {heard ? `“${heard}”` : 'Listening…'}
+              </span>
+              <span className="text-bone/60" style={{ fontSize: 'clamp(10px, 5cqh, 15px)' }}>
+                Like “opponents take 3 and I gain 1” · tap when done
+              </span>
+            </button>
+          )}
 
           {game.phase === 'seating' && (
             <button

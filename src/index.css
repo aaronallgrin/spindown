@@ -430,3 +430,8 @@ html.table-lock body {
   .santa-elf { display: none; }
   .elf-peek svg { animation: none; }
 }
+
+/* the mic while a panel is listening */
+.mic-pulse {
+  animation: dangerPulse 1.2s ease-in-out infinite;
+}
