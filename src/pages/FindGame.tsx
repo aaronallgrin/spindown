@@ -3,6 +3,7 @@ import { Link, useNavigate } from '../nav';
 import { BRACKETS } from '../types';
 import { Btn, Page } from '../ui';
 import { FORMATS, StatusChip, formatLine } from '../components/PollBits';
+import { eventUrl, isCommander, isPrerelease, nearbyEvents, when, type MagicEvent } from '../events';
 import {
   addDays,
   createPoll,
@@ -88,8 +89,126 @@ export default function FindGame() {
             ))}
           </div>
         )}
+        <NearbyEvents />
       </div>
     </Page>
+  );
+}
+
+// ---------- Magic events near you ----------
+
+const ZIP = 'spindown.zip';
+const readZip = () => {
+  try {
+    return localStorage.getItem(ZIP) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+/** Store events from the Wizards locator, near the zip this phone saved. */
+function NearbyEvents() {
+  const [zip, setZip] = useState(readZip);
+  const [draft, setDraft] = useState('');
+  const [events, setEvents] = useState<MagicEvent[] | null>(null);
+  const [err, setErr] = useState('');
+  const [all, setAll] = useState(false);
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (!zip) return;
+    let alive = true;
+    nearbyEvents(zip)
+      .then((list) => alive && setEvents(list))
+      .catch(() => alive && setErr('Couldn’t load events. Check the events function is set up in Supabase, or try again later.'));
+    return () => {
+      alive = false;
+    };
+  }, [zip]);
+
+  const save = (z: string) => {
+    try {
+      localStorage.setItem(ZIP, z);
+    } catch {
+      /* still works for this visit */
+    }
+    setEvents(null);
+    setErr('');
+    setZip(z);
+  };
+
+  if (!zip)
+    return (
+      <section className="mt-2 flex flex-col gap-2">
+        <h2 className="px-1 font-cond text-xl font-bold">Magic events near you</h2>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (/^\d{5}$/.test(draft)) save(draft);
+          }}
+        >
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.replace(/\D/g, '').slice(0, 5))}
+            inputMode="numeric"
+            aria-label="Your zip code"
+            placeholder="Your zip code"
+            className="min-w-0 flex-1 rounded-xl bg-white/[.06] px-3.5 py-2.5 text-bone placeholder:text-dim"
+          />
+          <Btn variant="primary" type="submit" disabled={draft.length !== 5}>
+            Find events
+          </Btn>
+        </form>
+      </section>
+    );
+
+  const shown = all ? events : events?.slice(0, 15);
+  return (
+    <section className="mt-2 flex flex-col gap-2">
+      <div className="flex items-baseline justify-between px-1">
+        <h2>
+          <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex items-center gap-1.5 font-cond text-xl font-bold">
+            Magic events near you
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-dim transition-transform ${open ? '' : '-rotate-90'}`}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </h2>
+        <button type="button" onClick={() => save('')} className="text-xs text-dim">
+          Within 25 mi of {zip} · Change
+        </button>
+      </div>
+      {open && (
+        <>
+          {err && <p className="rounded-xl bg-blood/15 p-3 text-sm">{err}</p>}
+          {!events && !err && <p className="text-dim">Loading events</p>}
+          {events?.length === 0 && <p className="rounded-2xl bg-felt-2/80 px-4 py-5 text-dim">No events listed nearby right now.</p>}
+          {shown?.map((e) => (
+            <a
+              key={e.id}
+              href={eventUrl(e)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col gap-0.5 rounded-2xl bg-felt-2/80 px-4 py-3 ring-1 ring-white/[.05] transition hover:bg-felt-3"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="truncate font-semibold">{e.title}</span>
+                <span className="shrink-0 text-xs text-brass">{e.miles} mi</span>
+              </span>
+              <span className="truncate text-sm text-dim">
+                {isPrerelease(e) ? 'Prerelease · ' : isCommander(e) ? 'Commander · ' : e.format ? `${e.format} · ` : ''}
+                {when(e)} · {e.store}
+              </span>
+            </a>
+          ))}
+          {events && events.length > 15 && !all && (
+            <Btn onClick={() => setAll(true)}>Show all {events.length}</Btn>
+          )}
+          <p className="px-1 text-center text-[11px] text-dim">Prereleases and Commander first, then closest. From the Wizards Store and Event Locator.</p>
+        </>
+      )}
+    </section>
   );
 }
 
