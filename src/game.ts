@@ -75,7 +75,7 @@ export function newGame(config: GameConfig): LiveGame {
 }
 
 export type Action =
-  | { t: 'life'; seat: number; d: number }
+  | { t: 'life'; seat: number; d: number; from?: number }
   | { t: 'setLife'; seat: number; value: number }
   | { t: 'egg'; seat: number; egg: string }
   | { t: 'poison'; seat: number; d: number }
@@ -86,7 +86,9 @@ export type Action =
   | { t: 'pick'; seat: number }
   | { t: 'extra'; seat: number; d: number }
   | { t: 'mark'; seat: number; kind: DandanMark; d: 1 | -1 }
-  | { t: 'round'; d: 1 | -1 }
+  | { t: 'round'; d: number }
+  /** several changes as one step, so one Undo takes them all back (voice) */
+  | { t: 'batch'; actions: Action[] }
   | { t: 'out'; seat: number; cause: OutCause }
   | { t: 'win'; seat: number }
   | { t: 'revive'; seat: number }
@@ -172,7 +174,7 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
   switch (a.t) {
     case 'life': {
       const n = patch(g, a.seat, (p) => ({ ...p, life: p.life + a.d }));
-      return { ...n, events: log(g, { kind: 'life', seat: a.seat, delta: a.d }) };
+      return { ...n, events: log(g, { kind: 'life', seat: a.seat, delta: a.d, from: a.from }) };
     }
     case 'setLife': {
       const d = a.value - g.players[a.seat].life;
@@ -305,6 +307,8 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
         events: [...g.events, { at: Date.now(), round: g.round, turn: g.turn, seat: a.seat, kind: 'revive' }],
       });
     }
+    case 'batch':
+      return a.actions.reduce(reduce, g);
     case 'dismiss':
       return patch(g, a.seat, (p) => ({ ...p, lethalDismissed: true }));
     case 'end':
