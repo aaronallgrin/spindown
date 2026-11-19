@@ -736,11 +736,13 @@ function Tile({
     <div className={`relative flex min-h-0 overflow-hidden rounded-xl bg-felt-3 ${lethal ? 'ring-2 ring-blood' : ''}`}>
       {art && (
         <>
-          <div className="art" style={{ backgroundImage: `url("${art}")` }} />
-          <div className="absolute inset-0 bg-black/60" />
+          {/* decoration only: positioned layers paint above the (unpositioned) − / + halves,
+              so without pointer-events-none they swallow every tap except on the glyphs */}
+          <div className="art pointer-events-none" style={{ backgroundImage: `url("${art}")` }} />
+          <div className="pointer-events-none absolute inset-0 bg-black/60" />
         </>
       )}
-      <div className="absolute inset-x-0 top-0 flex h-[3px]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[3px]">
         {stripe.map((c, i) => (
           <div key={i} className="flex-1" style={{ background: c }} />
         ))}
