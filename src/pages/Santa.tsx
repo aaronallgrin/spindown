@@ -13,10 +13,8 @@ import {
   PDH_HOME,
   MIN_DRAW,
   amHost,
-  closesOn,
   SANTA_PLAYERS,
   drawNames,
-  signupsOpen,
   isUnboxed,
   loadExchange,
   myMatch,
@@ -108,7 +106,7 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
         <p className="text-sm text-dim">
           {x.drawn
             ? `Drawn at random. Nobody can see who has who, not even ${HOST}`
-            : `${signupsOpen() ? `Sign-ups close ${closesOn()}` : 'Sign-ups are closed'}. Then ${HOST} draws names at random`}
+            : `Sign-ups are open. Once everyone’s in, ${HOST} draws names at random`}
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {x.signups.map((s) => (
@@ -136,11 +134,11 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
           <p className="py-2 text-center text-dim">You’re in, {mine}</p>
           <NotifyNudge name={mine} />
         </>
-      ) : signupsOpen() ? (
+      ) : (
         <Btn variant="primary" className="w-full py-4 font-cond text-xl" onClick={() => go('signup')}>
           Sign up
         </Btn>
-      ) : null}
+      )}
 
       <a href={PDH_HOME} target="_blank" rel="noopener" className="block">
         <Card>
