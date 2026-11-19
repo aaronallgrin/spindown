@@ -3,8 +3,11 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// the version shown on Home is the date of the latest deploy, Philadelphia time
-const buildDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).replaceAll('-', '_');
+// the version shown on Home: 2.<year>.<day of year> of the latest deploy, Philadelphia time (2.2026.323 = Nov 19, 2026).
+// The leading 2 started with voice input; bump it by hand for the next big change.
+const [y, m, d] = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).split('-').map(Number);
+const dayOfYear = (Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 0)) / 864e5;
+const buildDate = `2.${y}.${String(dayOfYear).padStart(3, '0')}`;
 
 export default defineConfig({
   base: './',
