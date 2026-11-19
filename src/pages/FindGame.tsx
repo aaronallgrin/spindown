@@ -113,6 +113,7 @@ function NearbyEvents() {
   const [events, setEvents] = useState<MagicEvent[] | null>(null);
   const [err, setErr] = useState('');
   const [all, setAll] = useState(false);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     if (!zip) return;
@@ -166,36 +167,47 @@ function NearbyEvents() {
   return (
     <section className="mt-2 flex flex-col gap-2">
       <div className="flex items-baseline justify-between px-1">
-        <h2 className="font-cond text-xl font-bold">Magic events near you</h2>
+        <h2>
+          <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex items-center gap-1.5 font-cond text-xl font-bold">
+            Magic events near you
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-dim transition-transform ${open ? '' : '-rotate-90'}`}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </h2>
         <button type="button" onClick={() => save('')} className="text-xs text-dim">
           Within 25 mi of {zip} · Change
         </button>
       </div>
-      {err && <p className="rounded-xl bg-blood/15 p-3 text-sm">{err}</p>}
-      {!events && !err && <p className="text-dim">Loading events</p>}
-      {events?.length === 0 && <p className="rounded-2xl bg-felt-2/80 px-4 py-5 text-dim">No events listed nearby right now.</p>}
-      {shown?.map((e) => (
-        <a
-          key={e.id}
-          href={eventUrl(e)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-col gap-0.5 rounded-2xl bg-felt-2/80 px-4 py-3 ring-1 ring-white/[.05] transition hover:bg-felt-3"
-        >
-          <span className="flex items-center justify-between gap-3">
-            <span className="truncate font-semibold">{e.title}</span>
-            <span className="shrink-0 text-xs text-brass">{e.miles} mi</span>
-          </span>
-          <span className="truncate text-sm text-dim">
-            {isPrerelease(e) ? 'Prerelease · ' : isCommander(e) ? 'Commander · ' : e.format ? `${e.format} · ` : ''}
-            {when(e)} · {e.store}
-          </span>
-        </a>
-      ))}
-      {events && events.length > 15 && !all && (
-        <Btn onClick={() => setAll(true)}>Show all {events.length}</Btn>
+      {open && (
+        <>
+          {err && <p className="rounded-xl bg-blood/15 p-3 text-sm">{err}</p>}
+          {!events && !err && <p className="text-dim">Loading events</p>}
+          {events?.length === 0 && <p className="rounded-2xl bg-felt-2/80 px-4 py-5 text-dim">No events listed nearby right now.</p>}
+          {shown?.map((e) => (
+            <a
+              key={e.id}
+              href={eventUrl(e)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col gap-0.5 rounded-2xl bg-felt-2/80 px-4 py-3 ring-1 ring-white/[.05] transition hover:bg-felt-3"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="truncate font-semibold">{e.title}</span>
+                <span className="shrink-0 text-xs text-brass">{e.miles} mi</span>
+              </span>
+              <span className="truncate text-sm text-dim">
+                {isPrerelease(e) ? 'Prerelease · ' : isCommander(e) ? 'Commander · ' : e.format ? `${e.format} · ` : ''}
+                {when(e)} · {e.store}
+              </span>
+            </a>
+          ))}
+          {events && events.length > 15 && !all && (
+            <Btn onClick={() => setAll(true)}>Show all {events.length}</Btn>
+          )}
+          <p className="px-1 text-center text-[11px] text-dim">Prereleases and Commander first, then closest. From the Wizards Store and Event Locator.</p>
+        </>
       )}
-      <p className="px-1 text-center text-[11px] text-dim">Prereleases and Commander first, then closest. From the Wizards Store and Event Locator.</p>
     </section>
   );
 }
