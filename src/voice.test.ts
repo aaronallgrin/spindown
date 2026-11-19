@@ -3,9 +3,11 @@ import { makeConfig, newGame, reduce } from './game';
 import { parseVoice } from './voice';
 import type { LiveGame } from './types';
 
+const card = (name: string) => ({ name, colorIdentity: [] });
 function table(names = ['Aaron', 'Tim', 'DSW', 'Dylan']): LiveGame {
   const c = makeConfig('commander', undefined, 4, 'p4');
-  c.players = c.players.map((p, i) => ({ ...p, name: names[i] }));
+  c.players = c.players.map((p, i) => ({ ...p, name: names[i], commander: card(['Norin the Wary', 'The Ur-Dragon', 'Atraxa, Praetors\' Voice', 'Thrasios, Triton Hero'][i]) }));
+  c.players[3] = { ...c.players[3], hasPartner: true, partner: card('Tymna the Weaver') };
   const g = newGame(c);
   return reduce(reduce(g, { t: 'pick', seat: 0 }), { t: 'pick', seat: 0 });
 }
@@ -37,9 +39,30 @@ describe('voice', () => {
     expect(apply(apply(table(), 'round 6').g, 'round two').g.round).toBe(2);
   });
 
+  it('commander damage: from the speaker, or the commander or player named, and it takes life', () => {
+    const a = apply(table(), 'Tim takes 6 commander damage').g;
+    expect(a.players[1]).toMatchObject({ life: 34, cmdr: { '0:0': 6 } });
+    expect(apply(table(), 'Tim takes 5 commander damage from Atraxa').g.players[1].cmdr).toEqual({ '2:0': 5 });
+    expect(apply(table(), 'Tim takes 5 commander damage from Spencer').g.players[1].cmdr).toEqual({ '2:0': 5 });
+    expect(apply(table(), 'I take 7 commander damage from Tymna').g.players[0].cmdr).toEqual({ '3:1': 7 });
+    expect(parseVoice('Tim takes 3 commander damage', table(), 3)).toEqual({ error: 'Which of Dylan’s commanders? Say its name' });
+  });
+
+  it('poison, asterisk and monarch', () => {
+    const { g, said } = apply(table(), 'Tim gets 2 poison and I get an asterisk and I am the monarch');
+    expect(g.players[1].poison).toBe(2);
+    expect(g.players[0].extra).toBe(1);
+    expect(g.monarchSeat).toBe(0);
+    expect(said).toBe('Tim +2 poison, Aaron +1 *, Aaron is the monarch');
+    expect(apply(g, 'take back my star').g.players[0].extra).toBe(0);
+    expect(apply(g, 'remove 1 poison from Tim').g.players[1].poison).toBe(1);
+    expect(apply(g, 'Tim is the patriarchy').g.monarchSeat).toBe(1);
+    expect(apply(g, "I'm the monarchy").g.monarchSeat).toBe(0); // already the monarch: stays
+  });
+
   it('changes nothing it only half understood', () => {
     const g = table();
-    for (const s of ['', 'Bob takes 3', 'opponents take 3 and draw a card', 'Tim takes 6 commander damage', 'open stats'])
+    for (const s of ['', 'Bob takes 3', 'opponents take 3 and draw a card', 'open stats', 'the monarch', 'Tim and Spencer are the monarch'])
       expect('error' in parseVoice(s, g, 0)).toBe(true);
   });
 

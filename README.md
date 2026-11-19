@@ -7,7 +7,7 @@ A Magic: The Gathering life counter for one shared phone, built for 4-player Com
 - Poison and the biggest commander damage show on each panel's Counters button; a panel one hit from lethal pulses red
 - The * (misplay) counter: tap it to pick why (misplay, take-back, slow play…), hold to take one back
 - Forgot to add your commander? Hold your name on your panel mid-game to fix your deck
-- Voice: tap your name and say a life change, like "opponents take 3 and I gain 1" or "it's turn 6". Damage you say others take is credited to you; one Undo takes back the whole sentence
+- Voice: tap your name and say what happened, like "opponents take 3 and I gain 1", "Tim takes 6 commander damage" (from your commander, or "from Atraxa"), "Tim gets 2 poison", "I get an asterisk", "I'm the monarch" or "it's turn 6". Damage you say others take is credited to you; one Undo takes back the whole sentence
 - Counters screen also sets a life total or gains/loses an amount; tap anywhere else to back out
 - Center d20: shows the round; tap for the next round, double-tap to go back one, hold for the menu (undo, end game, leave, discard)
 - First player: once everyone's seated, tap a seat, tap again to confirm (tapping the die rolls a plain d20 if no one has dice)
