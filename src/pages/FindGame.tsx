@@ -21,6 +21,7 @@ import {
 /** Polls the group has running, newest first. */
 export default function FindGame() {
   const cfg = pollsCfg();
+  useEffect(() => keep('spindown.findSeen', '1'), []);
   const [data, setData] = useState<{ polls: Poll[]; counts: Record<string, number> } | null>(null);
   const [err, setErr] = useState('');
 
@@ -98,17 +99,26 @@ export default function FindGame() {
 // ---------- Magic events near you ----------
 
 const ZIP = 'spindown.zip';
-const readZip = () => {
+const MILES = 'spindown.miles';
+const read = (key: string) => {
   try {
-    return localStorage.getItem(ZIP) ?? '';
+    return localStorage.getItem(key) ?? '';
   } catch {
     return '';
+  }
+};
+const keep = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* still works for this visit */
   }
 };
 
 /** Store events from the Wizards locator, near the zip this phone saved. */
 function NearbyEvents() {
-  const [zip, setZip] = useState(readZip);
+  const [zip, setZip] = useState(() => read(ZIP));
+  const [miles, setMiles] = useState(() => Number(read(MILES)) || 25);
   const [draft, setDraft] = useState('');
   const [events, setEvents] = useState<MagicEvent[] | null>(null);
   const [err, setErr] = useState('');
@@ -118,23 +128,27 @@ function NearbyEvents() {
   useEffect(() => {
     if (!zip) return;
     let alive = true;
-    nearbyEvents(zip)
+    nearbyEvents(zip, miles)
       .then((list) => alive && setEvents(list))
       .catch(() => alive && setErr('Couldn’t load events. Check the events function is set up in Supabase, or try again later.'));
     return () => {
       alive = false;
     };
-  }, [zip]);
+  }, [zip, miles]);
 
-  const save = (z: string) => {
-    try {
-      localStorage.setItem(ZIP, z);
-    } catch {
-      /* still works for this visit */
-    }
+  const reload = () => {
     setEvents(null);
     setErr('');
+  };
+  const save = (z: string) => {
+    keep(ZIP, z);
+    reload();
     setZip(z);
+  };
+  const saveMiles = (m: number) => {
+    keep(MILES, String(m));
+    reload();
+    setMiles(m);
   };
 
   if (!zip)
@@ -175,9 +189,20 @@ function NearbyEvents() {
             </svg>
           </button>
         </h2>
-        <button type="button" onClick={() => save('')} className="text-xs text-dim">
-          Within 25 mi of {zip} · Change
-        </button>
+        <span className="flex items-center gap-1 text-xs text-dim">
+          Within
+          <select aria-label="Distance" value={miles} onChange={(e) => saveMiles(+e.target.value)} className="rounded-md bg-white/[.06] px-1 py-0.5 text-bone">
+            {[5, 10, 25, 50, 100].map((m) => (
+              <option key={m} value={m}>
+                {m} mi
+              </option>
+            ))}
+          </select>
+          of
+          <button type="button" onClick={() => save('')} aria-label={`Change zip code ${zip}`} className="underline">
+            {zip}
+          </button>
+        </span>
       </div>
       {open && (
         <>
@@ -205,7 +230,7 @@ function NearbyEvents() {
           {events && events.length > 15 && !all && (
             <Btn onClick={() => setAll(true)}>Show all {events.length}</Btn>
           )}
-          <p className="px-1 text-center text-[11px] text-dim">Prereleases and Commander first, then closest. From the Wizards Store and Event Locator.</p>
+          <p className="px-1 text-center text-[11px] text-dim">Soonest first. From the Wizards Store and Event Locator.</p>
         </>
       )}
     </section>

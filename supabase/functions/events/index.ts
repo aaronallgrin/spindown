@@ -15,13 +15,13 @@ const CORS = {
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
-// one search on Wizards' locator: up to 50 events with this tag (or any, if no tag), within 25 miles, in the next `days` days
-async function search(zip: string, tag: string, days: number) {
+// one search on Wizards' locator: up to 50 events with this tag (or any, if no tag), within `miles` miles, in the next `days` days
+async function search(zip: string, miles: number, tag: string, days: number) {
   const now = new Date();
   const q = new URLSearchParams({
     searchType: 'magic-events',
     query: zip,
-    distance: '25',
+    distance: String(miles),
     page: '1',
     pageSize: '50',
     ...(tag && { tag }),
@@ -56,9 +56,11 @@ Deno.serve(async (req) => {
   const zip = new URL(req.url).searchParams.get('zip') ?? '';
   // validate here: whatever comes in goes into a request to Wizards
   if (!/^\d{5}$/.test(zip)) return json({ error: 'Enter a 5-digit zip code.' }, 400);
+  const miles = Number(new URL(req.url).searchParams.get('miles') ?? 25);
+  if (!Number.isInteger(miles) || miles < 1 || miles > 100) return json({ error: 'Distance must be 1 to 100 miles.' }, 400);
   try {
     // prereleases are rarer, so look further ahead for them; everything else just this week
-    const lists = await Promise.all([search(zip, 'magic_prerelease', 90), search(zip, 'commander', 14), search(zip, '', 7)]);
+    const lists = await Promise.all([search(zip, miles, 'magic_prerelease', 90), search(zip, miles, 'commander', 14), search(zip, miles, '', 7)]);
     const seen = new Set<string>();
     return json({ events: lists.flat().filter((e) => !seen.has(e.id) && seen.add(e.id)) });
   } catch (e) {
