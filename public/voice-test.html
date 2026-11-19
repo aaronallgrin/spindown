@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spin Voice">
+<title>Spindown voice test</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 40px; background: #1B1B1B; color: #fff;
+         font: 16px/1.4 -apple-system, system-ui, sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h1 span { color: #FFA31A; }
+  .muted { color: #808080; font-size: 13px; }
+  .box { background: #292929; border-radius: 14px; padding: 14px; margin-top: 14px; }
+  #mic { display: block; width: 120px; height: 120px; margin: 24px auto 8px; border: 0;
+         border-radius: 50%; background: #FFA31A; color: #1B1B1B; font-size: 48px; }
+  #mic.on { animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.08); } }
+  #heard { min-height: 1.4em; text-align: center; font-style: italic; }
+  .row { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
+  .row b { width: 96px; color: #808080; font-weight: 400; }
+  input { flex: 1; background: #1B1B1B; color: #fff; border: 1px solid #808080;
+          border-radius: 8px; padding: 8px; font-size: 16px; }
+  img { width: 100%; border-radius: 10px; margin-top: 8px; }
+  .btns { display: flex; gap: 10px; margin-top: 12px; }
+  button.act { flex: 1; padding: 12px; border: 0; border-radius: 10px; font-size: 16px; }
+  .yes { background: #FFA31A; color: #1B1B1B; } .no { background: #1B1B1B; color: #fff; }
+  .player { display: flex; justify-content: space-between; padding: 8px 0;
+            border-bottom: 1px solid #1B1B1B; }
+  .first { color: #FFA31A; }
+</style>
+</head>
+<body>
+<h1><span>Spin</span>down voice test</h1>
+<div class="muted" id="diag"></div>
+
+<button id="mic" aria-label="Tap to talk">🎙️</button>
+<div id="heard" class="muted">Tap and say: “I'm Aaron, I'm playing Norin the Wary, and I'm going first.”</div>
+
+<div class="box" id="card" hidden>
+  <div class="row"><b>Player</b><input id="fName"></div>
+  <div class="row"><b>Commander</b><input id="fCmd"></div>
+  <div class="row"><b>Going first</b><input id="fFirst" type="checkbox" style="flex:0;width:24px;height:24px"></div>
+  <div class="muted" id="cmdNote"></div>
+  <img id="art" alt="" hidden>
+  <div class="btns">
+    <button class="act no" id="retry">Try again</button>
+    <button class="act yes" id="ok">✓ Add player</button>
+  </div>
+</div>
+
+<div class="box"><div class="muted">Table</div><div id="table"></div></div>
+
+<div class="box">
+  <div class="muted">Fallback test: tap the box, then the keyboard's mic key, talk, and press Go.</div>
+  <form id="typed" class="row"><input id="typedIn" placeholder="Dictate or type here"></form>
+</div>
+
+<script>
+// Parse one setup sentence into { name, commander, first }. Pure function so it's easy to test.
+function parseSetup(text) {
+  const t = ' ' + text.toLowerCase().replace(/[.!?]/g, '') + ' ';
+  const first = /\b(go(ing)? first|i'?m first|i start|starting)\b/.test(t);
+  const nameM = t.match(/\b(?:i'?m|i am|this is|my name is|it'?s)\s+([a-z']+)/);
+  let name = nameM ? nameM[1] : '';
+  if (/^(playing|going|first|the)$/.test(name)) name = '';
+  const cmdM = t.match(/\b(?:playing|my commander is|commander is|piloting|on)\s+(.+?)(?=,|\s+and\s+i|\s+i'?m\s+going|\s+going first|\s+i'?m first|\s+$)/);
+  const cap = s => s.replace(/\b\w/g, c => c.toUpperCase());
+  return { name: cap(name), commander: cmdM ? cap(cmdM[1].trim()) : '', first };
+}
+if (typeof module !== 'undefined') module.exports = { parseSetup };
+</script>
+<script>
+const $ = id => document.getElementById(id);
+const players = [];
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+$('diag').textContent = `Voice: ${SR ? 'available ✅' : 'NOT available ❌'} · Running as: ${installed ? 'Home Screen app' : 'browser tab'}`;
+
+let rec = null;
+$('mic').onclick = () => {
+  if (!SR) { $('heard').textContent = 'One-tap voice isn’t available here — try the fallback box below.'; return; }
+  if (rec) { rec.stop(); return; }
+  rec = new SR();
+  rec.lang = 'en-US';
+  rec.interimResults = true;
+  rec.onresult = e => {
+    const text = [...e.results].map(r => r[0].transcript).join('');
+    $('heard').textContent = '“' + text + '”';
+    if (e.results[e.results.length - 1].isFinal) handle(text);
+  };
+  rec.onerror = e => { $('heard').textContent = 'Error: ' + e.error + (e.error === 'not-allowed' ? ' (mic permission blocked)' : ''); };
+  rec.onend = () => { rec = null; $('mic').classList.remove('on'); };
+  rec.start();
+  $('mic').classList.add('on');
+  $('heard').textContent = 'Listening…';
+};
+
+$('typed').onsubmit = e => { e.preventDefault(); $('heard').textContent = '“' + $('typedIn').value + '”'; handle($('typedIn').value); };
+
+async function handle(text) {
+  const p = parseSetup(text);
+  $('fName').value = p.name;
+  $('fCmd').value = p.commander;
+  $('fFirst').checked = p.first;
+  $('card').hidden = false;
+  await lookup(p.commander);
+}
+
+// Scryfall fuzzy lookup fixes misheard names ("Noreen the wary" -> "Norin the Wary").
+async function lookup(name) {
+  $('art').hidden = true;
+  $('cmdNote').textContent = '';
+  if (!name) { $('cmdNote').textContent = 'Didn’t catch a commander — type it in.'; return; }
+  try {
+    const r = await fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(name));
+    const c = await r.json();
+    if (!r.ok) { $('cmdNote').textContent = 'Scryfall: ' + (c.details || 'no match'); return; }
+    $('fCmd').value = c.name;
+    $('cmdNote').textContent = 'Colors: ' + (c.color_identity.join('') || 'Colorless');
+    const img = c.image_uris || (c.card_faces && c.card_faces[0].image_uris);
+    if (img) { $('art').src = img.art_crop; $('art').hidden = false; }
+  } catch { $('cmdNote').textContent = 'Couldn’t reach Scryfall (offline?)'; }
+}
+$('fCmd').onchange = () => lookup($('fCmd').value);
+
+$('retry').onclick = () => { $('card').hidden = true; $('mic').click(); };
+$('ok').onclick = () => {
+  if ($('fFirst').checked) players.forEach(p => p.first = false);
+  players.push({ name: $('fName').value || 'Player ' + (players.length + 1), commander: $('fCmd').value, first: $('fFirst').checked });
+  $('card').hidden = true;
+  $('table').innerHTML = players.map(p =>
+    `<div class="player"><span>${esc(p.name)}${p.first ? ' <span class="first">· first</span>' : ''}</span><span class="muted">${esc(p.commander)}</span></div>`).join('');
+};
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+</script>
+</body>
+</html>
