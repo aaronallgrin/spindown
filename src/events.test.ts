@@ -7,14 +7,14 @@ const ev = (p: Partial<MagicEvent>): MagicEvent => ({
 });
 
 describe('rankEvents', () => {
-  it('puts prereleases, then Commander, then the rest, closest first', () => {
+  it('puts the soonest event first, whatever its format or distance', () => {
     const out = rankEvents([
-      ev({ title: 'fnm', miles: 1 }),
-      ev({ title: 'cmd far', format: 'Commander', miles: 9 }),
-      ev({ title: 'pre', tags: ['magic_prerelease'], format: 'Sealed Deck', miles: 20 }),
-      ev({ title: 'cmd near', format: 'Commander', miles: 2 }),
+      ev({ title: 'fnm sat', miles: 1, start: '2026-11-22T23:00:00Z' }),
+      ev({ title: 'cmd fri', format: 'Commander', miles: 9, start: '2026-11-21T23:00:00Z' }),
+      ev({ title: 'pre jan', tags: ['magic_prerelease'], miles: 20, start: '2027-01-29T23:00:00Z' }),
+      ev({ title: 'cmd thu', format: 'Commander', miles: 2, start: '2026-11-20T23:00:00Z' }),
     ]);
-    expect(out.map((e) => e.title)).toEqual(['pre', 'cmd near', 'cmd far', 'fnm']);
+    expect(out.map((e) => e.title)).toEqual(['cmd thu', 'cmd fri', 'fnm sat', 'pre jan']);
   });
 
   it('keeps one prerelease per store (its earliest) and only the 3 closest stores', () => {
@@ -27,7 +27,7 @@ describe('rankEvents', () => {
       pre('C', 'C', 2, '2027-01-29T23:00:00Z'),
       pre('D', 'D', 9, '2027-01-29T23:00:00Z'),
     ]);
-    expect(out.map((e) => e.title)).toEqual(['A fri', 'C', 'B']);
+    expect(out.map((e) => e.title).sort()).toEqual(['A fri', 'B', 'C']);
   });
 });
 

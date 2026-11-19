@@ -13,9 +13,9 @@ import { THEMES, themesOn, type Look } from '../season';
 import { santaSeason } from '../santa';
 import { ElfPeek } from '../components/Elf';
 
-const santaSeen = () => {
+const seen = (key: string) => {
   try {
-    return localStorage.getItem('spindown.santaSeen') === '1';
+    return localStorage.getItem(key) === '1';
   } catch {
     return false;
   }
@@ -78,12 +78,12 @@ export default function Home() {
           {santaSeason() && (
             <div className="relative mt-10">
               <ElfPeek />
-              <BigLink to="/santa" tag={santaSeen() ? undefined : 'NEW'} sub={santaSeen() ? 'Gift exchange' : undefined}>
+              <BigLink to="/santa" tag={seen('spindown.santaSeen') ? undefined : 'NEW'} sub={seen('spindown.santaSeen') ? 'Gift exchange' : undefined}>
                 Pauper Secret Santa
               </BigLink>
             </div>
           )}
-          <BigLink to="/find">
+          <BigLink to="/find" tag={seen('spindown.findSeen') ? undefined : 'NEW'}>
             Plan game night
           </BigLink>
           <BigLink to="/history" sub={count ? `${count} games · stats` : 'Stats'}>
