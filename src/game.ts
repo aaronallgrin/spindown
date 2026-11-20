@@ -1,4 +1,5 @@
 import type {
+  CardRef,
   DandanMark,
   EventKind,
   Format,
@@ -11,7 +12,7 @@ import type {
   PlayerResult,
   PlayerSetup,
 } from './types';
-import { PAUPER_EDH, SUB_FORMATS, sharedDeck } from './types';
+import { MANA, PAUPER_EDH, SUB_FORMATS, sharedDeck } from './types';
 
 export const POISON_LETHAL = 10;
 /** commander damage that kills: 21, or 16 in Pauper Commander */
@@ -82,6 +83,8 @@ export type Action =
   | { t: 'cmdr'; seat: number; from: number; partner: 0 | 1; d: number }
   | { t: 'monarch'; seat: number }
   | { t: 'seatInfo'; seat: number; setup: PlayerSetup }
+  /** art and colors looked up after the seat was saved; not an undo step */
+  | { t: 'cards'; seat: number; commander?: CardRef; partner?: CardRef }
   | { t: 'ready' }
   | { t: 'pick'; seat: number }
   | { t: 'extra'; seat: number; d: number }
@@ -219,6 +222,16 @@ export function reduce(g: LiveGame, a: Action): LiveGame {
       // Mid-game only the deck can change (a forgotten commander), never the name.
       const playing = g.phase === 'playing';
       const players = g.config.players.map((p, i) => (i !== a.seat ? p : playing ? { ...a.setup, name: p.name } : a.setup));
+      return { ...g, config: { ...g.config, players } };
+    }
+    case 'cards': {
+      const players = g.config.players.map((p, i) => {
+        if (i !== a.seat) return p;
+        const commander = a.commander ?? p.commander;
+        const partner = p.hasPartner ? (a.partner ?? p.partner) : p.partner;
+        const ids = [...(commander?.colorIdentity ?? []), ...(p.hasPartner ? (partner?.colorIdentity ?? []) : [])];
+        return { ...p, commander, partner, colors: ids.length ? MANA.filter((m) => ids.includes(m)) : p.colors };
+      });
       return { ...g, config: { ...g.config, players } };
     }
     case 'ready':

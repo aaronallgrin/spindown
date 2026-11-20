@@ -455,7 +455,7 @@ export function SeatSheet({
           <div className="flex items-center gap-3 px-[2.5cqh] pt-[2cqh]" style={{ fontSize: 'clamp(13px, 3.2cqh, 20px)' }}>
             <button
               onClick={close}
-              className="flex min-h-[2.6em] items-center rounded-full bg-felt-3 px-[1.1em] font-semibold text-bone/90 active:bg-line"
+              className="glow-back flex min-h-[2.6em] items-center rounded-full px-[1.1em] font-semibold text-bone active:scale-95"
             >
               ‹ Back
             </button>

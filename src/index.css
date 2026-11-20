@@ -435,3 +435,28 @@ html.table-lock body {
 .mic-pulse {
   animation: dangerPulse 1.2s ease-in-out infinite;
 }
+
+/* Back on a player's sheet: a spark of brass circles the edge while the button breathes */
+@property --glow-a {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.glow-back {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-felt-3), var(--color-felt-3)) padding-box,
+    conic-gradient(from var(--glow-a), rgb(255 163 26 / 0.15), var(--color-brass) 12%, #fff4dc 16%, var(--color-brass) 20%, rgb(255 163 26 / 0.15) 40%) border-box;
+  animation: glowSpin 3s linear infinite, glowBreathe 2.4s ease-in-out infinite;
+  transition: scale 0.1s;
+}
+@keyframes glowSpin {
+  to { --glow-a: 360deg; }
+}
+@keyframes glowBreathe {
+  0%, 100% { box-shadow: 0 0 8px 0 rgb(255 163 26 / 0.25); }
+  50% { box-shadow: 0 0 18px 3px rgb(255 163 26 / 0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-back { animation: none; box-shadow: 0 0 12px 1px rgb(255 163 26 / 0.4); }
+}

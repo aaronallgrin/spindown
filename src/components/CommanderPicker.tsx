@@ -7,12 +7,16 @@ export default function CommanderPicker({
   value,
   onChange,
   placeholder = 'Search commanders',
+  onDraft,
 }: {
   value?: CardRef;
   onChange: (c: CardRef | undefined) => void;
   placeholder?: string;
+  /** what's typed but not yet picked, so Save can still use it */
+  onDraft?: (q: string) => void;
 }) {
   const [q, setQ] = useState('');
+  useEffect(() => onDraft?.(q), [q, onDraft]);
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle');
