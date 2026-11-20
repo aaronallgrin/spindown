@@ -15,25 +15,33 @@ const CORS = {
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
-// one search on Wizards' locator: up to 50 events with this tag (or any, if no tag), within `miles` miles, in the next `days` days
+// one search on Wizards' locator: every event with this tag (or any, if no tag), within `miles` miles, in the next `days` days
 async function search(zip: string, miles: number, tag: string, days: number) {
   const now = new Date();
-  const q = new URLSearchParams({
-    searchType: 'magic-events',
-    query: zip,
-    distance: String(miles),
-    page: '1',
-    pageSize: '50',
-    ...(tag && { tag }),
-    startDate: day(now),
-    endDate: day(new Date(now.getTime() + days * 864e5)),
-  });
-  const r = await fetch(`https://locator.wizards.com/en/search.data?${q}`);
-  if (!r.ok || !r.body) throw new Error(`Wizards answered ${r.status}`);
-  const d = await decode(r.body);
-  await d.done;
   // deno-lint-ignore no-explicit-any
-  const events: any[] = (d.value as any)['routes/($lang).search']?.data?.events?.advancedSearchEvents?.events ?? [];
+  const events: any[] = [];
+  // Wizards sends at most 50 a page, and a busy city fills 50 in a day or two, so keep reading pages
+  // shortcut: stops at 10 pages (500 events per search); raise it if a list ever ends early
+  for (let page = 1; page <= 10; page++) {
+    const q = new URLSearchParams({
+      searchType: 'magic-events',
+      query: zip,
+      distance: String(miles),
+      page: String(page),
+      pageSize: '50',
+      ...(tag && { tag }),
+      startDate: day(now),
+      endDate: day(new Date(now.getTime() + days * 864e5)),
+    });
+    const r = await fetch(`https://locator.wizards.com/en/search.data?${q}`);
+    if (!r.ok || !r.body) throw new Error(`Wizards answered ${r.status}`);
+    const d = await decode(r.body);
+    await d.done;
+    // deno-lint-ignore no-explicit-any
+    const got: any[] = (d.value as any)['routes/($lang).search']?.data?.events?.advancedSearchEvents?.events ?? [];
+    events.push(...got);
+    if (got.length < 50) break;
+  }
   return events
     .filter((e) => !e.isOnline && e.status === 'SCHEDULED')
     .map((e) => ({
