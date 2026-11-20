@@ -33,14 +33,24 @@ export const rankEvents = (list: MagicEvent[]) => {
   return [...pre, ...list.filter((e) => !isPrerelease(e))].sort(byDate);
 };
 
-/** This phone's zip code, from its location. OpenStreetMap turns the spot into an address. */
+const DENIED =
+  'Spindown isn’t allowed to see your location. On iPhone: Settings → Privacy & Security → Location Services → turn it on, and set Safari Websites to While Using. Or just type your zip.';
+const LOST = 'Couldn’t find your location. Try again, or type your zip.';
+
+/** This phone's zip code, from its location. OpenStreetMap turns the spot into an address. Errors are worded for the screen. */
 export async function zipHere(): Promise<string> {
+  if (!navigator.geolocation) throw new Error(LOST);
   const { coords } = await new Promise<GeolocationPosition>((ok, no) =>
-    navigator.geolocation.getCurrentPosition(ok, no, { timeout: 15000, maximumAge: 36e5 }),
+    navigator.geolocation.getCurrentPosition(ok, (e) => no(new Error(e.code === e.PERMISSION_DENIED ? DENIED : LOST)), {
+      timeout: 15000,
+      maximumAge: 36e5,
+    }),
   );
-  const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}`);
-  const zip = String((await r.json()).address?.postcode ?? '').slice(0, 5);
-  if (!/^\d{5}$/.test(zip)) throw new Error('No US zip here');
+  const zip = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}`)
+    .then((r) => r.json())
+    .then((j) => String(j.address?.postcode ?? '').slice(0, 5))
+    .catch(() => '');
+  if (!/^\d{5}$/.test(zip)) throw new Error('Couldn’t find a zip code for where you are. Type it in instead.');
   return zip;
 }
 
