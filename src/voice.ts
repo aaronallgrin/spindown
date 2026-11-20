@@ -40,15 +40,107 @@ const POISON = /\bpoison\b/;
 const CMDR = /\bcommander\b/;
 const TAKE_OFF = /\b(remove|take back|take away|minus|undo)\b/;
 
-export type Heard = { actions: Action[]; said: string } | { error: string };
+/** A name the phone misheard and what Spindown thinks it was ("nora the weary" → "norin the wary"). */
+export type Guess = { heard: string; meant: string };
+export type Heard = { actions: Action[]; said: string; guessed?: Guess[] } | { error: string };
 
-export function parseVoice(text: string, g: LiveGame, speaker: number): Heard {
-  const t = text
+const clean = (text: string) =>
+  text
     .toLowerCase()
     .replace(/(\w)\.(?=\w)/g, '$1') // "D.S.W." → "dsw"
     .replace(/[^a-z0-9' ]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+/**
+ * Exact words first. If that fails, try the group's confirmed fixes (`learned`, heard → meant),
+ * then sound-alike player and commander names. A result with `guessed` should be confirmed before applying.
+ */
+export function parseVoice(text: string, g: LiveGame, speaker: number, learned: Record<string, string> = {}): Heard {
+  const exact = parseExact(text, g, speaker);
+  if (!('error' in exact)) return exact;
+  const taught = swap(clean(text), Object.entries(learned).map(([heard, meant]) => ({ heard, meant })));
+  const fixed = parseExact(taught, g, speaker);
+  if (!('error' in fixed)) return fixed;
+  const guessed = guesses(taught, g);
+  const r = guessed.length ? parseExact(swap(taught, guessed), g, speaker) : exact;
+  return 'error' in r ? exact : { ...r, guessed };
+}
+
+function swap(t: string, pairs: Guess[]) {
+  for (const { heard, meant } of pairs) if (clean(heard)) t = t.replace(new RegExp(`\\b${clean(heard)}\\b`, 'g'), clean(meant));
+  return t;
+}
+
+// words the parser already understands; never mistaken for a name
+const GRAMMAR = new Set(
+  `and then also from take takes took lose loses lost get gets got gain gains gained commander damage poison life
+   i i'm im me my myself monarch monarchy patriarch patriarchy asterisk asterisks star stars misplay misplays turn round
+   number it it's its is are am the a an to too for of remove back away minus undo everyone everybody each player players
+   all us table opponent opponents else others actually please point points now one`
+    .split(/\s+/)
+    .concat(Object.keys(NUMS)),
+);
+
+/** Runs of 1–3 unknown words that sound like a player or commander name in this game. */
+function guesses(t: string, g: LiveGame): Guess[] {
+  const targets = new Map<string, string>(); // as spoken → as written
+  for (const p of g.config.players)
+    for (const [n, min] of [[p.name, 3], [p.commander?.name, 4], [p.hasPartner ? p.partner?.name : '', 4]] as const) {
+      const full = clean(n ?? '');
+      if (!full) continue;
+      targets.set(full, n!.trim());
+      if (full.split(' ')[0].length >= min) targets.set(full.split(' ')[0], n!.trim().split(/[\s,]/)[0]);
+    }
+  const words = t.split(' ');
+  const used = new Set<number>();
+  const out: Guess[] = [];
+  for (let len = 3; len >= 1; len--)
+    for (let i = 0; i + len <= words.length; i++) {
+      const run = words.slice(i, i + len);
+      // "the"/"of" may sit inside a name ("norin the wary"), never at its ends
+      if (run.some((w, j) => GRAMMAR.has(w) && (j === 0 || j === len - 1 || !['the', 'of'].includes(w)) || /^\d+$/.test(w))) continue;
+      if (run.some((_, j) => used.has(i + j))) continue;
+      const heard = run.join(' ');
+      if (heard.length < 3 || targets.has(heard)) continue;
+      let best = '';
+      let score = 0.75; // shortcut: fixed cutoff, tune if it guesses too much or too little
+      for (const [n, written] of targets) {
+        const s = similarity(heard, n);
+        if (s >= score) [best, score] = [written, s];
+      }
+      if (!best) continue;
+      run.forEach((_, j) => used.add(i + j));
+      out.push({ heard, meant: best });
+    }
+  return out;
+}
+
+// rough "sounds like" spelling so kodi/cody and kristen/christen line up
+const sound = (s: string) =>
+  s.replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/c(?=[eiy])/g, 's').replace(/c/g, 'k').replace(/[yi]+/g, 'i').replace(/z/g, 's').replace(/(.)\1+/g, '$1');
+
+function similarity(a: string, b: string) {
+  const ratio = (x: string, y: string) => 1 - distance(x, y) / Math.max(x.length, y.length, 1);
+  return Math.max(ratio(a, b), ratio(sound(a), sound(b)));
+}
+
+function distance(a: string, b: string) {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return row[b.length];
+}
+
+function parseExact(text: string, g: LiveGame, speaker: number): Heard {
+  const t = clean(text);
   if (!t) return { error: 'Didn’t hear anything' };
   const nope = { error: `Didn’t catch: “${text}”` };
 

@@ -4,7 +4,8 @@ import { getLayout, seatLetter, turnAreas, type Rot } from '../layouts';
 import { DANDAN_MARKS, isDandan, type LiveGame } from '../types';
 import { ColorStripe, causeLabel, manaVar, sortMana } from '../ui';
 import { Crown, Mic, Poison, Skull, Sword } from './icons';
-import { canListen, listen, parseVoice } from '../voice';
+import { canListen, listen, parseVoice, type Guess } from '../voice';
+import { learn, learnedWords, refreshLearned } from '../voiceWords';
 import { usePress } from './usePress';
 import { buzz } from '../haptics';
 import { mayWhisper, onToast } from './toastBus';
@@ -107,17 +108,34 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
   const [heard, setHeard] = useState<string | null>(null);
   const stopVoice = useRef<() => void>(undefined);
   useEffect(() => () => stopVoice.current?.(), []);
+  // a sentence that only worked by guessing a name waits for ✓ before it changes anything
+  const [ask, setAsk] = useState<{ actions: Action[]; said: string; guessed: Guess[] } | null>(null);
+  useEffect(() => {
+    if (!ask) return;
+    const t = window.setTimeout(() => setAsk(null), 10000);
+    return () => window.clearTimeout(t);
+  }, [ask]);
   const startVoice = () => {
     if (heard != null) return stopVoice.current?.();
     setHeard('');
+    setAsk(null);
+    void refreshLearned();
     stopVoice.current = listen(setHeard, (r) => {
       setHeard(null);
       if ('error' in r) return say(r.error);
-      const h = parseVoice(r.text, live.current, seat);
+      const h = parseVoice(r.text, live.current, seat, learnedWords());
       if ('error' in h) return say(h.error);
+      if (h.guessed) return setAsk({ actions: h.actions, said: h.said, guessed: h.guessed });
       dispatch({ t: 'batch', actions: h.actions });
       say(h.said);
     });
+  };
+  const confirm = () => {
+    if (!ask) return;
+    dispatch({ t: 'batch', actions: ask.actions });
+    say(ask.said);
+    learn(ask.guessed);
+    setAsk(null);
   };
   // hold your name to fix your deck mid-game (a forgotten commander)
   const nameHold = usePress(voiceOn ? startVoice : () => {}, game.phase === 'playing' ? onEdit : undefined, 600, 1e9);
@@ -300,6 +318,25 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
                 Like “opponents take 3 and I gain 1” · tap when done
               </span>
             </button>
+          )}
+
+          {ask && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-[2cqh] bg-black/90 px-[6cqw] text-center">
+              <span className="text-bone/60" style={{ fontSize: 'clamp(10px, 5cqh, 15px)' }}>
+                {ask.guessed.map((x) => `“${x.heard}” = ${x.meant}?`).join(' · ')}
+              </span>
+              <span className="line-clamp-2 font-cond font-bold" style={{ fontSize: 'clamp(14px, 8cqh, 28px)' }}>
+                {ask.said}
+              </span>
+              <div className="flex gap-[4cqw]">
+                <button onClick={() => setAsk(null)} className="rounded-lg bg-white/10 px-[5cqw] py-[1.5cqh] font-semibold">
+                  ✗ No
+                </button>
+                <button onClick={confirm} className="rounded-lg bg-brass px-[5cqw] py-[1.5cqh] font-semibold text-felt">
+                  ✓ Yes
+                </button>
+              </div>
+            </div>
           )}
 
           {game.phase === 'seating' && (
