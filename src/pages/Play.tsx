@@ -139,6 +139,7 @@ export default function Play() {
   const portrait = layout.orientation === 'portrait';
   const vpPortrait = vp.h >= vp.w;
   const turned = portrait !== vpPortrait;
+  const turn = !turned ? 0 : screen.orientation?.angle === 90 ? -90 : 90;
   const long = Math.max(vp.w, vp.h);
   const short = Math.min(vp.w, vp.h);
   const w = portrait ? short : long;
@@ -167,7 +168,7 @@ export default function Play() {
         style={{
           width: w,
           height: h,
-          rotate: turned ? '90deg' : '0deg',
+          rotate: `${turn}deg`,
           gridTemplateAreas: layout.areas.map((r) => `"${r}"`).join(' '),
           gridTemplateColumns: `repeat(${layout.areas[0].split(' ').length}, 1fr)`,
           gridTemplateRows: `repeat(${layout.areas.length}, 1fr)`,
@@ -445,7 +446,7 @@ export default function Play() {
           // while seating, the phone is held upright to type in names and commanders;
           // once the game is on, open facing the player who tapped, like their panel
           // the end-of-game card is upright too
-          rot={game.phase === 'seating' || game.phase === 'over' ? 0 : (layout.rot[editing] + (turned ? 90 : 0)) % 360}
+          rot={game.phase === 'seating' || game.phase === 'over' ? 0 : (layout.rot[editing] + turn + 360) % 360}
           format={game.config.format}
           subFormat={game.config.subFormat}
           // a quick-start "Player 2" isn't a real name, so start the box empty
