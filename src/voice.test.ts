@@ -66,4 +66,26 @@ describe('voice', () => {
       expect('error' in parseVoice(s, g, 0)).toBe(true);
   });
 
+  it('guesses misheard names, but only when the exact words fail', () => {
+    const g = table(['Aaron', 'Tim', 'Cody', 'Dylan']);
+    const h = parseVoice('Kodi takes 3', g, 0);
+    expect(h).toMatchObject({ said: 'Cody −3', guessed: [{ heard: 'kodi', meant: 'Cody' }] });
+    const c = parseVoice('Tim takes 5 commander damage from nora the weary', g, 2);
+    expect(c).toMatchObject({ guessed: [{ heard: 'nora the weary', meant: 'Norin the Wary' }] });
+    if ('error' in c) throw new Error(c.error);
+    expect(reduce(g, { t: 'batch', actions: c.actions }).players[1].cmdr).toEqual({ '0:0': 5 });
+    // exact words never get a guess attached
+    expect(parseVoice('Cody takes 3', g, 0)).not.toHaveProperty('guessed');
+    // too far off: still nothing
+    expect('error' in parseVoice('Erin takes 3', g, 1)).toBe(true);
+  });
+
+  it('uses fixes the group confirmed, without asking again', () => {
+    const g = table();
+    const h = parseVoice('Erin takes 3', g, 1, { erin: 'Aaron' });
+    expect(h).toMatchObject({ said: 'Aaron −3' });
+    expect(h).not.toHaveProperty('guessed');
+    // a real player named Erin wins over the fix
+    expect(parseVoice('Erin takes 3', table(['Erin', 'Tim', 'DSW', 'Dylan']), 1, { erin: 'Aaron' })).toMatchObject({ said: 'Erin −3' });
+  });
 });
