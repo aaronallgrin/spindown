@@ -67,7 +67,9 @@ export async function getCard(name: string): Promise<CardRef> {
   const cache = readCache();
   const hit = cache[name.toLowerCase()];
   if (hit) return hit;
-  const res = await fetch(`${API}/cards/named?exact=${encodeURIComponent(name)}`);
+  let res = await fetch(`${API}/cards/named?exact=${encodeURIComponent(name)}`);
+  // typed or misheard names ("norin") still find the card
+  if (!res.ok) res = await fetch(`${API}/cards/named?fuzzy=${encodeURIComponent(name)}`);
   if (!res.ok) throw new Error(`No card named ${name}`);
   const ref = toRef(await res.json());
   remember(cache, ref);

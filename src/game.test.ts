@@ -207,3 +207,12 @@ describe('Pauper Commander', () => {
     expect(run(g, { t: 'out', seat: 2, cause: 'lose' }).monarchSeat).toBeNull();
   });
 });
+
+describe('card art filled in later', () => {
+  it('adds art and colors without touching the name or the undo history', () => {
+    const g = started();
+    const n = reduce(g, { t: 'cards', seat: 1, commander: { name: 'Norin the Wary', colorIdentity: ['R'], artCrop: 'x.jpg' } });
+    expect(n.config.players[1]).toMatchObject({ name: 'Tim', commander: { artCrop: 'x.jpg' }, colors: ['R'] });
+    expect(n.events).toBe(g.events);
+  });
+});

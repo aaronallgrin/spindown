@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import CommanderPicker from './CommanderPicker';
 import { getCard } from '../scryfall';
 import { deckKey, usePlayerMemory } from './usePlayerMemory';
@@ -63,16 +63,28 @@ export default function SeatEditor({
         .filter((n) => n.toLowerCase().includes(typed.toLowerCase()))
         .slice(0, 12);
 
+  // typed into a commander box but never picked from the list: Save uses the typed name,
+  // and the table looks up the real card and art (the lookup also fixes the spelling)
+  const draft = useRef({ commander: '', partner: '' });
+  const onDraftCommander = useCallback((q: string) => void (draft.current.commander = q), []);
+  const onDraftPartner = useCallback((q: string) => void (draft.current.partner = q), []);
+  const typedCard = (k: 'commander' | 'partner') => {
+    const t = draft.current[k].trim();
+    return t.length >= 2 ? { name: t, colorIdentity: [] } : undefined;
+  };
   const save = () => {
     if (!name || dupe || asking) return;
+    const commander = p.commander ?? (isCmdr ? typedCard('commander') : undefined);
+    const partner = p.partner ?? (isCmdr ? typedCard('partner') : undefined);
     if (shared) return onSave({ ...p, name, deckName: shared.deckName, theme: undefined, colors: shared.colors, hasPartner: false });
     onSave({
       ...p,
       name,
+      commander,
       deckName: fields.deck ? p.deckName : undefined,
       theme: fields.theme ? p.theme : undefined,
-      partner: p.hasPartner ? p.partner : undefined,
-      colors: isCmdr ? union(p.commander?.colorIdentity, p.hasPartner ? p.partner?.colorIdentity : undefined) : p.colors,
+      partner: p.hasPartner ? partner : undefined,
+      colors: isCmdr ? union(commander?.colorIdentity, p.hasPartner ? partner?.colorIdentity : undefined) : p.colors,
     });
   };
 
@@ -204,7 +216,7 @@ export default function SeatEditor({
 
         {isCmdr ? (
           <>
-            <CommanderPicker value={p.commander} onChange={(c) => set({ commander: c })} />
+            <CommanderPicker value={p.commander} onChange={(c) => set({ commander: c })} onDraft={onDraftCommander} />
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -219,6 +231,7 @@ export default function SeatEditor({
                 value={p.partner}
                 placeholder="Search partner or background"
                 onChange={(c) => set({ partner: c })}
+                onDraft={onDraftPartner}
               />
             )}
             {/* brackets don't apply to Pauper Commander */}

@@ -3,13 +3,14 @@ import { Navigate } from 'react-router-dom';
 import { useNavigate } from '../nav';
 import { alive, isQuickName, needsNames, seated, toRecord, type Action } from '../game';
 import TrophyList from '../components/Trophies';
-import type { LiveGame } from '../types';
+import type { LiveGame, PlayerSetup } from '../types';
 import SeatEditor from '../components/SeatEditor';
 import { funOn, setFun, toast } from '../components/toastBus';
 import { setTips, tipsFor } from '../components/tips';
 import { HATCH, THREAT, TIM_CLEAN, ZENKAI, fmtSecs, rageQuit, threatSeat, timCleanWin, trophies } from '../eggs';
 import { getLayout, seatLetter, type Layout } from '../layouts';
 import { useStore } from '../store';
+import { getCard } from '../scryfall';
 import Seat, { SeatSheet, type SheetKind } from '../components/Seat';
 import SpinDie from '../components/SpinDie';
 import ConfirmBtn from '../components/ConfirmBtn';
@@ -82,7 +83,7 @@ function useQuickUndo(game: LiveGame | null, canUndo: boolean) {
     setShow(true);
     const t = window.setTimeout(() => setShow(false), 5000);
     return () => window.clearTimeout(t);
-  }, [game, canUndo]);
+  }, [game?.events, canUndo]); // eslint-disable-line react-hooks/exhaustive-deps
   return show;
 }
 
@@ -116,6 +117,7 @@ export default function Play() {
   useWakeLock();
   useTableLock();
   useOutNotes(game, dispatch);
+  useCardArt(game, dispatch);
 
   // once the last seat is filled, go straight to picking who goes first
   const allSeated = !!game && game.phase === 'seating' && seated(game);
@@ -616,6 +618,32 @@ function TimEgg({ seat, dispatch }: { seat: number; dispatch: (a: Action) => voi
       <img src={`${import.meta.env.BASE_URL}eggs/tim-2.png`} alt="" className="bubble-r w-[22.5%] max-w-[6.9rem] self-end" />
     </button>
   );
+}
+
+/**
+ * A commander saved without art (Scryfall didn't answer, a name typed but not picked, or a
+ * saved deck tapped and played before its art arrived) gets looked up again: when the table
+ * opens and whenever the phone comes back online.
+ */
+function useCardArt(game: LiveGame | null, dispatch: (a: Action) => void) {
+  const live = useRef(game);
+  live.current = game;
+  const id = game?.id;
+  const seats = game?.config.players.map((p) => `${p.commander?.name}|${p.partner?.name}`).join();
+  useEffect(() => {
+    const fill = () =>
+      live.current?.config.players.forEach((p, seat) => {
+        const need = (c?: PlayerSetup['commander']) => (c && !c.artCrop ? getCard(c.name).catch(() => undefined) : Promise.resolve(undefined));
+        const partner = p.hasPartner ? p.partner : undefined;
+        if (!(p.commander && !p.commander.artCrop) && !(partner && !partner.artCrop)) return;
+        Promise.all([need(p.commander), need(partner)]).then(([commander, partner]) => {
+          if (commander || partner) dispatch({ t: 'cards', seat, commander, partner });
+        });
+      });
+    fill();
+    window.addEventListener('online', fill);
+    return () => window.removeEventListener('online', fill);
+  }, [id, seats, dispatch]);
 }
 
 /** Quiet lines when someone goes out: a rage quit on a concession, and Chris being The Threat. */
