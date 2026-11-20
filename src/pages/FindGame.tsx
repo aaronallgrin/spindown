@@ -125,6 +125,7 @@ function NearbyEvents() {
   const [all, setAll] = useState(false);
   const [open, setOpen] = useState(true);
   const [locating, setLocating] = useState(false);
+  const [locErr, setLocErr] = useState('');
 
   useEffect(() => {
     if (!zip) return;
@@ -152,16 +153,17 @@ function NearbyEvents() {
     setMiles(m);
   };
 
-  const locate = () => {
+  const locate = (quiet = false) => {
     setLocating(true);
+    setLocErr('');
     zipHere()
       .then(save)
-      .catch(() => {}) // no location (or not allowed): the zip box is right there
+      .catch((e: Error) => quiet || setLocErr(e.message))
       .finally(() => setLocating(false));
   };
   // no zip saved yet: try the phone's location first, so nobody has to type one
   useEffect(() => {
-    if (!read(ZIP)) locate();
+    if (!read(ZIP)) locate(true);
   }, []);
 
   if (!zip)
@@ -187,9 +189,10 @@ function NearbyEvents() {
             Find events
           </Btn>
         </form>
-        <Btn type="button" onClick={locate} disabled={locating}>
+        <Btn type="button" onClick={() => locate()} disabled={locating}>
           {locating ? 'Finding your location…' : 'Use my location'}
         </Btn>
+        {locErr && <p className="rounded-xl bg-blood/15 p-3 text-sm">{locErr}</p>}
       </section>
     );
 
