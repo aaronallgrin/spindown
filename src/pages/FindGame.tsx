@@ -3,7 +3,7 @@ import { Link, useNavigate } from '../nav';
 import { BRACKETS } from '../types';
 import { Btn, Page } from '../ui';
 import { FORMATS, StatusChip, formatLine } from '../components/PollBits';
-import { eventUrl, isCommander, isPrerelease, nearbyEvents, when, type MagicEvent } from '../events';
+import { eventUrl, isCommander, isPrerelease, nearbyEvents, when, zipHere, type MagicEvent } from '../events';
 import {
   addDays,
   createPoll,
@@ -124,6 +124,7 @@ function NearbyEvents() {
   const [err, setErr] = useState('');
   const [all, setAll] = useState(false);
   const [open, setOpen] = useState(true);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (!zip) return;
@@ -151,6 +152,18 @@ function NearbyEvents() {
     setMiles(m);
   };
 
+  const locate = () => {
+    setLocating(true);
+    zipHere()
+      .then(save)
+      .catch(() => {}) // no location (or not allowed): the zip box is right there
+      .finally(() => setLocating(false));
+  };
+  // no zip saved yet: try the phone's location first, so nobody has to type one
+  useEffect(() => {
+    if (!read(ZIP)) locate();
+  }, []);
+
   if (!zip)
     return (
       <section className="mt-2 flex flex-col gap-2">
@@ -174,6 +187,9 @@ function NearbyEvents() {
             Find events
           </Btn>
         </form>
+        <button type="button" onClick={locate} disabled={locating} className="self-start px-1 text-sm text-dim underline">
+          {locating ? 'Finding your location…' : 'Use my location'}
+        </button>
       </section>
     );
 

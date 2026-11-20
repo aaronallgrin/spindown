@@ -33,6 +33,17 @@ export const rankEvents = (list: MagicEvent[]) => {
   return [...pre, ...list.filter((e) => !isPrerelease(e))].sort(byDate);
 };
 
+/** This phone's zip code, from its location. OpenStreetMap turns the spot into an address. */
+export async function zipHere(): Promise<string> {
+  const { coords } = await new Promise<GeolocationPosition>((ok, no) =>
+    navigator.geolocation.getCurrentPosition(ok, no, { timeout: 15000, maximumAge: 36e5 }),
+  );
+  const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}`);
+  const zip = String((await r.json()).address?.postcode ?? '').slice(0, 5);
+  if (!/^\d{5}$/.test(zip)) throw new Error('No US zip here');
+  return zip;
+}
+
 export async function nearbyEvents(zip: string, miles: number): Promise<MagicEvent[]> {
   const r = await cloud(`functions/v1/events?zip=${zip}&miles=${miles}`);
   // the filter also covers an events function deployed before it took `miles`
