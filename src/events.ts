@@ -34,7 +34,7 @@ export const rankEvents = (list: MagicEvent[]) => {
 };
 
 const DENIED =
-  'Spindown isn’t allowed to see your location. On iPhone: Settings → Privacy & Security → Location Services → turn it on, and set Safari Websites to While Using. Or just type your zip.';
+  'Spindown isn’t allowed to see your location. On iPhone, Spindown isn’t listed by name: go to Settings → Privacy & Security → Location Services, turn it on, then set Safari Websites to While Using. Also check Settings → Apps → Safari → Location isn’t Deny. Or just type your zip.';
 const LOST = 'Couldn’t find your location. Try again, or type your zip.';
 
 /** This phone's zip code, from its location. OpenStreetMap turns the spot into an address. Errors are worded for the screen. */
