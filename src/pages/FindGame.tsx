@@ -118,7 +118,7 @@ const keep = (key: string, value: string) => {
 /** Store events from the Wizards locator, near the zip this phone saved. */
 function NearbyEvents() {
   const [zip, setZip] = useState(() => read(ZIP));
-  const [miles, setMiles] = useState(() => Number(read(MILES)) || 25);
+  const [miles, setMiles] = useState(() => Number(read(MILES)) || 5);
   const [draft, setDraft] = useState('');
   const [events, setEvents] = useState<MagicEvent[] | null>(null);
   const [err, setErr] = useState('');
@@ -187,9 +187,9 @@ function NearbyEvents() {
             Find events
           </Btn>
         </form>
-        <button type="button" onClick={locate} disabled={locating} className="self-start px-1 text-sm text-dim underline">
+        <Btn type="button" onClick={locate} disabled={locating}>
           {locating ? 'Finding your location…' : 'Use my location'}
-        </button>
+        </Btn>
       </section>
     );
 
