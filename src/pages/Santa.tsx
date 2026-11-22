@@ -60,7 +60,7 @@ export default function Santa() {
         <path d="M2 7 C 22 2, 34 11, 55 6 S 92 2, 110 7 S 150 11, 168 5 C 175 3, 181 4, 187 8" fill="none" stroke="#FFA31A" strokeWidth="2.4" strokeLinecap="round" />
       </svg>
       <p className="text-dim">You build a Pauper Commander deck for one of us. Someone builds one for you. Nobody knows who.</p>
-      <p className="mt-1 font-semibold text-bone">$20 cap, deck box included</p>
+      <p className="mt-1 font-semibold text-bone">$25 cap. Box, sleeves and basic lands don’t count</p>
       {/* whole line is the link, with padding, so it's an easy thumb target */}
       <a href="https://www.instagram.com/andoo_c/" target="_blank" rel="noopener" className="-ml-2 inline-block px-2 py-2.5 text-xs text-brass">
         IP by Andrew Campos <span className="underline">@andoo_c</span>
@@ -158,7 +158,7 @@ function Body({ x, go, reload }: { x: Exchange; go: (v: 'signup' | 'reveal') => 
         <ul className="list-disc space-y-1 pl-5 text-[15px]">
           <li>Sleeve it in old sleeves you already have</li>
           <li>Make a deck box for it. Cardboard and tape counts</li>
-          <li>$20 cap, deck box included</li>
+          <li>$25 cap. Box, sleeves and basic lands don’t count</li>
           <li>Include the tokens and counters the deck needs</li>
           <li>Tuck in a note: what the deck wants to do, and one card to watch for</li>
           <li>Respect their “avoid” list</li>
@@ -253,7 +253,7 @@ function UnboxingDate({ date, reload }: { date: string | null; reload: () => voi
         </div>
       ) : (
         <p className="text-dim">
-          {pretty ?? 'Date TBD'}
+          {pretty ?? 'Still working out a day we can all meet up'}
           {host && (
             <button type="button" onClick={() => setEdit(true)} className="ml-2 text-sm text-brass">
               {date ? 'Change' : 'Set the date'}
