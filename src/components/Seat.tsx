@@ -125,7 +125,7 @@ export default function Seat({ game, seat, rot, area, headerPad, onEdit, sheet, 
       if ('error' in r) return say(r.error);
       const h = parseVoice(r.text, live.current, seat, learnedWords());
       if ('error' in h) return say(h.error);
-      if (h.guessed) return setAsk({ actions: h.actions, said: h.said, guessed: h.guessed });
+      if (h.guessed && !h.guessed.every((x) => x.sure)) return setAsk({ actions: h.actions, said: h.said, guessed: h.guessed });
       dispatch({ t: 'batch', actions: h.actions });
       say(h.said);
     });

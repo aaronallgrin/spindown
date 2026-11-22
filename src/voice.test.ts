@@ -69,20 +69,31 @@ describe('voice', () => {
   it('guesses misheard names, but only when the exact words fail', () => {
     const g = table(['Aaron', 'Tim', 'Cody', 'Dylan']);
     const h = parseVoice('Kodi takes 3', g, 0);
-    expect(h).toMatchObject({ said: 'Cody −3', guessed: [{ heard: 'kodi', meant: 'Cody' }] });
+    expect(h).toMatchObject({ said: 'Cody −3', guessed: [{ heard: 'kodi', meant: 'Cody', sure: true }] });
     const c = parseVoice('Tim takes 5 commander damage from nora the weary', g, 2);
     expect(c).toMatchObject({ guessed: [{ heard: 'nora the weary', meant: 'Norin the Wary' }] });
     if ('error' in c) throw new Error(c.error);
     expect(reduce(g, { t: 'batch', actions: c.actions }).players[1].cmdr).toEqual({ '0:0': 5 });
     // exact words never get a guess attached
     expect(parseVoice('Cody takes 3', g, 0)).not.toHaveProperty('guessed');
-    // too far off: still nothing
-    expect('error' in parseVoice('Erin takes 3', g, 1)).toBe(true);
+    // nothing at the table sounds like it: still nothing
+    expect('error' in parseVoice('pineapple takes 3', g, 1)).toBe(true);
+  });
+
+  it('uses who is at the table: a clear winner needs no question', () => {
+    const g = table(['Aaron', 'Tim', 'Cody', 'Dylan']);
+    // only players can take damage, so "erin" can't be Norin the commander
+    expect(parseVoice('Erin takes 3', g, 1)).toMatchObject({ said: 'Aaron −3', guessed: [{ heard: 'erin', meant: 'Aaron', sure: true }] });
+    expect(parseVoice('Dillon takes 2', g, 0)).toMatchObject({ said: 'Dylan −2', guessed: [{ meant: 'Dylan', sure: true }] });
+    // two names about as close: ask first
+    const close = parseVoice('Nason takes 2', table(['Aaron', 'Jason', 'Cody', 'Mason']), 0);
+    expect(close).toHaveProperty('guessed');
+    if (!('error' in close)) expect(close.guessed?.every((x) => x.sure)).toBe(false);
   });
 
   it('uses fixes the group confirmed, without asking again', () => {
     const g = table();
-    const h = parseVoice('Erin takes 3', g, 1, { erin: 'Aaron' });
+    const h = parseVoice('Aron takes 3', g, 1, { aron: 'Aaron' });
     expect(h).toMatchObject({ said: 'Aaron −3' });
     expect(h).not.toHaveProperty('guessed');
     // a real player named Erin wins over the fix
