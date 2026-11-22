@@ -99,4 +99,14 @@ describe('voice', () => {
     // a real player named Erin wins over the fix
     expect(parseVoice('Erin takes 3', table(['Erin', 'Tim', 'DSW', 'Dylan']), 1, { erin: 'Aaron' })).toMatchObject({ said: 'Erin −3' });
   });
+  it('commander damage "from" a player means that player’s commander', () => {
+    const g = table(['Aaron', 'Tim', 'Cody', 'Dylan']);
+    for (const [text, speaker] of [['Tim takes 20 commander damage from Aaron', 0], ['Tim takes 20 commander damage from Aaron', 2], ['Tim takes 20 commander damage from Erin', 0], ['Tim takes 20 commander damage from Norin', 3]] as const) {
+      const h = parseVoice(text, g, speaker);
+      if ('error' in h) throw new Error(`${text}: ${h.error || 'not understood'}`);
+      expect(h.said, text).toBe('Tim +20 commander damage (Norin the Wary)');
+      expect(h.guessed?.every((x) => x.sure) ?? true, text).toBe(true);
+      expect(reduce(g, { t: 'batch', actions: h.actions }).players[1].cmdr, text).toEqual({ '0:0': 20 });
+    }
+  });
 });
