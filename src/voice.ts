@@ -86,14 +86,19 @@ const GRAMMAR = new Set(
 /** Runs of 1–3 unknown words that sound like a name at this table. */
 function guesses(t: string, g: LiveGame): Guess[] {
   // only names that make sense in that spot: players anywhere, commanders only after "from" in commander damage
-  const players = new Map<string, string>(); // as spoken → as written
-  const cards = new Map<string, string>();
-  for (const p of g.config.players)
-    for (const [n, min, to] of [[p.name, 3, players], [p.commander?.name, 4, cards], [p.hasPartner ? p.partner?.name : '', 4, cards]] as const) {
+  // as spoken → [as written, whose]; a player and their only commander are one choice ("from Aaron" = from Norin)
+  const players = new Map<string, [string, string]>();
+  const cards = new Map<string, [string, string]>();
+  for (const [seat, p] of g.config.players.entries())
+    for (const [n, min, to, who] of [
+      [p.name, 3, players, p.hasPartner ? `${seat}p` : `${seat}`],
+      [p.commander?.name, 4, cards, `${seat}`],
+      [p.hasPartner ? p.partner?.name : '', 4, cards, `${seat}b`],
+    ] as const) {
       const full = clean(n ?? '');
       if (!full) continue;
-      to.set(full, n!.trim());
-      if (full.split(' ')[0].length >= min) to.set(full.split(' ')[0], n!.trim().split(/[\s,]/)[0]);
+      to.set(full, [n!.trim(), who]);
+      if (full.split(' ')[0].length >= min) to.set(full.split(' ')[0], [n!.trim().split(/[\s,]/)[0], who]);
     }
   const words = t.split(' ');
   const used = new Set<number>();
@@ -112,9 +117,12 @@ function guesses(t: string, g: LiveGame): Guess[] {
       const afterFrom = before.lastIndexOf('from') > clauseStart && clauseWords.includes('commander');
       const pool = afterFrom ? new Map([...players, ...cards]) : players;
       // best and runner-up, counting each person or card once
-      const best = new Map<string, number>();
-      for (const [n, written] of pool) best.set(written, Math.max(best.get(written) ?? 0, similarity(heard, n)));
-      const [[meant, top] = ['', 0], [, next] = ['', 0]] = [...best].sort((a, b) => b[1] - a[1]);
+      const best = new Map<string, [string, number]>(); // whose → [closest name, score]
+      for (const [n, [written, who]] of pool) {
+        const score = similarity(heard, n);
+        if (score > (best.get(who)?.[1] ?? 0)) best.set(who, [written, score]);
+      }
+      const [[meant, top] = ['', 0], [, next] = ['', 0]] = [...best.values()].sort((a, b) => b[1] - a[1]);
       if (top < 0.6) continue;
       run.forEach((_, j) => used.add(i + j));
       // a clear winner at the table needs no question; very short words are too easy to mishear to be sure
