@@ -41,7 +41,7 @@ const CMDR = /\bcommander\b/;
 const TAKE_OFF = /\b(remove|take back|take away|minus|undo)\b/;
 
 /** A name the phone misheard and what Spindown thinks it was ("nora the weary" → "norin the wary"). */
-export type Guess = { heard: string; meant: string };
+export type Guess = { heard: string; meant: string; sure?: boolean };
 export type Heard = { actions: Action[]; said: string; guessed?: Guess[] } | { error: string };
 
 const clean = (text: string) =>
@@ -54,7 +54,8 @@ const clean = (text: string) =>
 
 /**
  * Exact words first. If that fails, try the group's confirmed fixes (`learned`, heard → meant),
- * then sound-alike player and commander names. A result with `guessed` should be confirmed before applying.
+ * then sound-alike names at this table. A result with `guessed` should be confirmed before applying,
+ * unless every guess is `sure` (one name is clearly closest, like "erin" when Aaron is the only near match).
  */
 export function parseVoice(text: string, g: LiveGame, speaker: number, learned: Record<string, string> = {}): Heard {
   const exact = parseExact(text, g, speaker);
@@ -82,15 +83,17 @@ const GRAMMAR = new Set(
     .concat(Object.keys(NUMS)),
 );
 
-/** Runs of 1–3 unknown words that sound like a player or commander name in this game. */
+/** Runs of 1–3 unknown words that sound like a name at this table. */
 function guesses(t: string, g: LiveGame): Guess[] {
-  const targets = new Map<string, string>(); // as spoken → as written
+  // only names that make sense in that spot: players anywhere, commanders only after "from" in commander damage
+  const players = new Map<string, string>(); // as spoken → as written
+  const cards = new Map<string, string>();
   for (const p of g.config.players)
-    for (const [n, min] of [[p.name, 3], [p.commander?.name, 4], [p.hasPartner ? p.partner?.name : '', 4]] as const) {
+    for (const [n, min, to] of [[p.name, 3, players], [p.commander?.name, 4, cards], [p.hasPartner ? p.partner?.name : '', 4, cards]] as const) {
       const full = clean(n ?? '');
       if (!full) continue;
-      targets.set(full, n!.trim());
-      if (full.split(' ')[0].length >= min) targets.set(full.split(' ')[0], n!.trim().split(/[\s,]/)[0]);
+      to.set(full, n!.trim());
+      if (full.split(' ')[0].length >= min) to.set(full.split(' ')[0], n!.trim().split(/[\s,]/)[0]);
     }
   const words = t.split(' ');
   const used = new Set<number>();
@@ -102,16 +105,20 @@ function guesses(t: string, g: LiveGame): Guess[] {
       if (run.some((w, j) => GRAMMAR.has(w) && (j === 0 || j === len - 1 || !['the', 'of'].includes(w)) || /^\d+$/.test(w))) continue;
       if (run.some((_, j) => used.has(i + j))) continue;
       const heard = run.join(' ');
-      if (heard.length < 3 || targets.has(heard)) continue;
-      let best = '';
-      let score = 0.75; // shortcut: fixed cutoff, tune if it guesses too much or too little
-      for (const [n, written] of targets) {
-        const s = similarity(heard, n);
-        if (s >= score) [best, score] = [written, s];
-      }
-      if (!best) continue;
+      if (heard.length < 3 || players.has(heard) || cards.has(heard)) continue;
+      const before = words.slice(0, i);
+      const clauseStart = Math.max(before.lastIndexOf('and'), before.lastIndexOf('then'));
+      const clauseWords = words.slice(clauseStart + 1);
+      const afterFrom = before.lastIndexOf('from') > clauseStart && clauseWords.includes('commander');
+      const pool = afterFrom ? new Map([...players, ...cards]) : players;
+      // best and runner-up, counting each person or card once
+      const best = new Map<string, number>();
+      for (const [n, written] of pool) best.set(written, Math.max(best.get(written) ?? 0, similarity(heard, n)));
+      const [[meant, top] = ['', 0], [, next] = ['', 0]] = [...best].sort((a, b) => b[1] - a[1]);
+      if (top < 0.6) continue;
       run.forEach((_, j) => used.add(i + j));
-      out.push({ heard, meant: best });
+      // a clear winner at the table needs no question; very short words are too easy to mishear to be sure
+      out.push({ heard, meant, sure: top - next >= 0.25 && heard.length >= 4 });
     }
   return out;
 }
@@ -120,9 +127,13 @@ function guesses(t: string, g: LiveGame): Guess[] {
 const sound = (s: string) =>
   s.replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/c(?=[eiy])/g, 's').replace(/c/g, 'k').replace(/[yi]+/g, 'i').replace(/z/g, 's').replace(/(.)\1+/g, '$1');
 
+// consonants only, so vowels the phone swaps around ("erin" / "aaron") still line up
+const skeleton = (s: string) => sound(s).replace(/[aeiou ]/g, '');
+
 function similarity(a: string, b: string) {
   const ratio = (x: string, y: string) => 1 - distance(x, y) / Math.max(x.length, y.length, 1);
-  return Math.max(ratio(a, b), ratio(sound(a), sound(b)));
+  const heard = ratio(sound(a), sound(b));
+  return Math.max(ratio(a, b), heard, (heard + ratio(skeleton(a), skeleton(b))) / 2);
 }
 
 function distance(a: string, b: string) {
