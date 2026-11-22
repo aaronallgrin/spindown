@@ -9,6 +9,7 @@ import '@fontsource/barlow-condensed/700.css';
 import './index.css';
 import { StoreProvider } from './store';
 import { startAutoSync } from './sync';
+import { startAutoUpdate } from './autoUpdate';
 import Home from './pages/Home';
 import NewGame from './pages/NewGame';
 import Play from './pages/Play';
@@ -51,6 +52,7 @@ if (mustInstall()) {
   root.render(<InstallFirst />);
 } else {
   startAutoSync();
+  startAutoUpdate();
   root.render(
     <StrictMode>
       <StoreProvider>
